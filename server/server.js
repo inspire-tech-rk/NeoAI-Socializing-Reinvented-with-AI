@@ -26,13 +26,29 @@ dotenv.config({
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-/* -------------------- MIDDLEWARE -------------------- */
+/* -------------------- CORS CONFIG -------------------- */
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://neo-ai-socializing-reinvented-with.vercel.app",
+  "https://neo-ai-socializing-with-ftdxbg424.vercel.app",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, postman, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -40,6 +56,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 /* -------------------- UPLOADS -------------------- */
+
 // Set headers for uploads
 app.use("/uploads", (req, res, next) => {
   res.setHeader("Accept-Ranges", "bytes");
@@ -58,13 +75,13 @@ app.use(
 );
 
 /* -------------------- ROUTES -------------------- */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/users", userRoutes);
 
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/stories", storyRoutes);
-// app.use("/api/feed-posts", feedPostRoute);
 
 app.use("/api/collections", savedCollectionRoutes);
 app.use("/api/nexai", nexaiRoutes);
@@ -79,10 +96,12 @@ app.get("/", (req, res) => {
 });
 
 /* -------------------- DATABASE & SERVER -------------------- */
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected ✅");
+
     app.listen(PORT, () => {
       console.log(`Server running on Port: ${PORT}`);
     });
