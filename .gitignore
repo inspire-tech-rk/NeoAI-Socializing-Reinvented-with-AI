@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Build folders
+build/
+dist/
+
+# Logs
+npm-debug.log
+
+# OS files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Uploads (optional)
+server/uploads/*
+!server/uploads/.gitkeep

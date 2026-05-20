@@ -1,0 +1,37 @@
+import { useEffect, useState } from "react";
+import ReelCard from "./ReelCard";
+import { API_URL } from "../../config";
+import axios from "axios"; // ✅ ADD
+import "./reel.css";
+
+export default function ReelFeed() {
+  const [reels, setReels] = useState([]);
+
+  useEffect(() => {
+    const fetchReels = async () => {
+      try {
+        // ✅ CALL RECOMMENDATION API (IMPORTANT)
+        const res = await axios.get(
+          `${API_URL}/api/recommendations`,
+          { withCredentials: true } // ✅ IMPORTANT FOR AUTH
+        );
+
+        setReels(res.data);
+      } catch (err) {
+        console.error("Failed to load reels:", err);
+      }
+    };
+
+    fetchReels();
+  }, []);
+
+  return (
+    <div className="reel-container">
+      {reels.map((reel) => (
+        <div key={reel._id} className="reel-card">
+          <ReelCard reel={reel} />
+        </div>
+      ))}
+    </div>
+  );
+}

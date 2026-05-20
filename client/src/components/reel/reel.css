@@ -1,0 +1,77 @@
+.reel-page {
+  height: 100vh;
+  width: 100%;
+  background: #0f1115;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Scroll container */
+.reel-container {
+  height: 100vh;
+  width: 420px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.reel-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Each snap section */
+.reel-card {
+  height: 100vh;
+  width: 100%;
+  scroll-snap-align: start;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Reel frame */
+.reel-card-inner {
+  height: 100vh;           /* gives top & bottom space */
+  aspect-ratio: 11 / 16;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  background: black;
+}
+
+/* Media */
+.reel-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reel-comment-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 340px;
+  background: #111;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #333;
+  animation: slideIn 0.25s ease-out;
+  z-index: 9999;
+}
+
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+
