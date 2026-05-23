@@ -16,7 +16,7 @@ export const getUserProfile = async (req, res) => {
 
     const formatUser = (u) => ({
       ...u._doc,
-      dp: u.dp ? `http://localhost:5000/${u.dp}` : "/default-dp.png",
+     dp: u.dp || "",
     });
 
     user.followers = user.followers.map(formatUser);
@@ -24,7 +24,7 @@ export const getUserProfile = async (req, res) => {
 
     res.json({
       ...user._doc,
-      dp: user.dp ? `http://localhost:5000/${user.dp}` : "/default-dp.png",
+     dp: user.dp || "",
     });
   } catch (err) {
     console.error("Get profile error:", err);
@@ -93,7 +93,7 @@ export const getSuggestions = async (req, res) => {
       return {
         _id: user._id,
         username: user.username,
-        dp: user.dp ? `http://localhost:5000/${user.dp}` : "/default-dp.png",
+       dp: user.dp || "",
 
         isFollowing: false, // default, frontend will toggle
         mutualCount: mutualFollowers.length,

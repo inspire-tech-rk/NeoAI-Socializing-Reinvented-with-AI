@@ -14,9 +14,13 @@ export default function ReelCard({ reel }) {
 
   const contentId = reel.content?._id || reel.content;
 
-  const mediaUrl = reel.file
-    ? `${API_URL}${encodeURI(reel.file)}`
-    : `${API_URL}${encodeURI(reel.media)}`;
+  const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
+const mediaUrl = getMediaUrl(reel.file || reel.media);
 
   /* --------------------------------------------------
     🎯 INTERSECTION OBSERVER (MAIN TRACKING)
