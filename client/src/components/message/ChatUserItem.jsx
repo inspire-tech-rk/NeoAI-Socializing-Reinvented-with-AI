@@ -1,7 +1,13 @@
+import { API_URL } from "../../config";
+
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 export default function ChatUserItem({ user, onClick }) {
-  const dp = user.dp
-    ? `http://localhost:5000/${user.dp.replace(/\\/g, "/")}`
-    : "/default-dp.png";
+  const dp = user.dp ? getMediaUrl(user.dp.replace(/\\/g, "/")) : "/default-dp.png";
 
   return (
     <div

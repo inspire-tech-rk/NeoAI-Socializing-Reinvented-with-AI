@@ -1,10 +1,16 @@
+import { API_URL } from "../../../config";
+
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 export default function PostMedia({ post }) {
   const media = post?.file || post?.img || "";
   if (!media) return null;
 
-  const mediaUrl = media.startsWith("http")
-    ? media
-    : `http://localhost:5000/${media.startsWith("/") ? media.slice(1) : media}`;
+  const mediaUrl = getMediaUrl(media);
 
   const isVideo =
     post?.type === "reel" ||

@@ -3,49 +3,26 @@ import Post from "../models/Post.js";
 import Content from "../models/Content.js";
 import Interaction from "../models/Interaction.js";
 import Notification from "../models/Notification.js";
-
 import { processCaption } from "../utils/aiProcessor.js";
 
-import ffmpeg from "fluent-ffmpeg";
-import ffmpegPath from "ffmpeg-static";
-import path from "path";
-import fs from "fs";
-
-ffmpeg.setFfmpegPath(ffmpegPath);
-
 /* ======================================================
-   🎥 CREATE REEL
+   🎥 CREATE REEL - CLOUDINARY VERSION
 ====================================================== */
 export const createReel = async (req, res) => {
   try {
-    const inputPath = req.file.path;
-    const outputName = `reel-${Date.now()}.mp4`;
-    const outputPath = path.join("uploads", outputName);
+    if (!req.file) {
+      return res.status(400).json({ message: "Media file is required" });
+    }
 
-    await new Promise((resolve, reject) => {
-      ffmpeg(inputPath)
-        .outputOptions([
-          "-c:v libx264",
-          "-preset fast",
-          "-pix_fmt yuv420p",
-          "-movflags +faststart",
-          "-profile:v baseline",
-          "-level 3.0",
-        ])
-        .save(outputPath)
-        .on("end", resolve)
-        .on("error", reject);
-    });
-
-    fs.unlinkSync(inputPath);
-
-    const mediaPath = `/uploads/${outputName}`;
+    const mediaPath = req.file.path; // Cloudinary URL
     const caption = req.body.caption || "";
 
-    const { embedding, categories } = await processCaption(caption);
+    const aiResult = (await processCaption(caption)) || {};
+    const embedding = aiResult.embedding || [];
+    const categories = aiResult.categories || ["general"];
 
     const content = await Content.create({
-      user: req.user.id,
+      user: req.user._id,
       type: "reel",
       media: mediaPath,
       caption,
@@ -55,7 +32,7 @@ export const createReel = async (req, res) => {
     });
 
     const reel = await Reel.create({
-      user: req.user.id,
+      user: req.user._id,
       media: mediaPath,
       type: "video",
       caption,
@@ -63,7 +40,7 @@ export const createReel = async (req, res) => {
     });
 
     const post = await Post.create({
-      user: req.user.id,
+      user: req.user._id,
       caption,
       file: mediaPath,
       type: "video",
@@ -78,33 +55,31 @@ export const createReel = async (req, res) => {
     });
   } catch (err) {
     console.error("Create reel error:", err);
-    res.status(500).json({ message: "Reel conversion failed" });
+    res.status(500).json({ message: "Reel upload failed" });
   }
 };
 
 /* ======================================================
-   🎬 GET REELS (FINAL FIXED)
+   🎬 GET REELS
 ====================================================== */
 export const getReels = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?._id;
 
-    // 🔥 1. INTERACTIONS
     const interactions = await Interaction.find({
       user: userId,
       type: { $in: ["watch", "like", "view", "comment"] },
     }).populate("content");
 
-    // 🔥 2. CATEGORY SCORE
     const categoryScore = {};
+
     interactions.forEach((item) => {
       const categories = item.content?.categories || [];
-
       let weight = 0;
 
       if (item.type === "view") weight = 2;
       if (item.type === "watch") weight = 5;
-      if (item.type === "comment") weight = 6; // 🔥 NEW
+      if (item.type === "comment") weight = 6;
       if (item.type === "like") weight = 8;
 
       categories.forEach((cat) => {
@@ -112,17 +87,16 @@ export const getReels = async (req, res) => {
       });
     });
 
-    // 🔥 3. FETCH POSTS
     let posts = await Post.find({ type: "video" })
       .populate("user", "username dp")
       .populate("likes", "_id username dp")
       .populate("reel")
       .populate("content");
 
-    // 🔥 4. SEEN CONTENT
-    const seenContentIds = interactions.map((i) => i.content?._id?.toString());
+    const seenContentIds = interactions.map((i) =>
+      i.content?._id?.toString()
+    );
 
-    // 🔥 5. FINAL SMART SORT
     const hasHistory = interactions.length > 0;
 
     posts = posts.sort((a, b) => {
@@ -132,27 +106,24 @@ export const getReels = async (req, res) => {
       const aScore =
         a.content?.categories?.reduce(
           (sum, cat) => sum + (categoryScore[cat] || 0),
-          0,
+          0
         ) || 0;
 
       const bScore =
         b.content?.categories?.reduce(
           (sum, cat) => sum + (categoryScore[cat] || 0),
-          0,
+          0
         ) || 0;
 
-      // ✅ COLD START
       if (!hasHistory) {
         return new Date(b.createdAt) - new Date(a.createdAt);
       }
 
-      // ✅ SOFT PENALTY
       const aFinal = aSeen ? aScore * 0.7 : aScore;
       const bFinal = bSeen ? bScore * 0.7 : bScore;
 
       if (aFinal !== bFinal) return bFinal - aFinal;
 
-      // ✅ FALLBACK
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
@@ -174,10 +145,10 @@ export const toggleLikeReel = async (req, res) => {
     const post = await Post.findOne({ reel: reel._id });
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const userId = req.user.id || req.user._id;
+    const userId = req.user._id;
 
     const isLiked = post.likes.some(
-      (id) => id.toString() === userId.toString(),
+      (id) => id.toString() === userId.toString()
     );
 
     if (isLiked) {
@@ -185,19 +156,16 @@ export const toggleLikeReel = async (req, res) => {
     } else {
       post.likes.push(userId);
 
-      // 🔥 INTERACTION
       await Interaction.create({
         user: userId,
         content: post.content,
         type: "like",
       });
 
-      // 🔥 BOOST CONTENT SIGNAL
       await Content.findByIdAndUpdate(post.content, {
         $inc: { likesCount: 1 },
       });
 
-      // 🔔 NOTIFICATION
       if (post.user.toString() !== userId.toString()) {
         await Notification.create({
           recipient: post.user,
@@ -212,7 +180,7 @@ export const toggleLikeReel = async (req, res) => {
 
     const updatedPost = await Post.findById(post._id).populate(
       "likes",
-      "_id username dp",
+      "_id username dp"
     );
 
     res.json({
@@ -222,12 +190,13 @@ export const toggleLikeReel = async (req, res) => {
       post: updatedPost,
     });
   } catch (err) {
+    console.error("Like reel error:", err);
     res.status(500).json({ message: "Like toggle failed" });
   }
 };
 
 /* ======================================================
-   📊 TRACK VIEW (FINAL FIXED)
+   📊 TRACK VIEW
 ====================================================== */
 export const trackReelView = async (req, res) => {
   try {
@@ -235,19 +204,16 @@ export const trackReelView = async (req, res) => {
 
     if (!contentId) return res.json({ success: true });
 
-    // 🔥 ALLOW STRONG REPEAT SIGNALS
     const alreadyInteracted = await Interaction.findOne({
       user: req.user._id,
       content: contentId,
       type: { $in: ["watch", "view"] },
     });
 
-    // 🔥 RELAXED (IMPORTANT)
     if (alreadyInteracted && watchTime < 5) {
       return res.json({ success: true });
     }
 
-    // 🔥 SESSION BLOCK
     const existing = await Interaction.findOne({
       user: req.user._id,
       content: contentId,
@@ -257,30 +223,26 @@ export const trackReelView = async (req, res) => {
 
     if (existing) return res.json({ success: true });
 
-    // 🔥 TYPE LOGIC
     let type;
-    if (watchTime > 15)
-      type = "watch"; // 🔥 easier to trigger
+
+    if (watchTime > 15) type = "watch";
     else if (watchTime > 3) type = "view";
     else return res.json({ success: true });
 
-    // 🔥 STORE
-    // 🔥 STORE INTERACTION
     await Interaction.create({
       user: req.user._id,
       content: contentId,
       type,
       watchTime,
-      completionRate: watchTime / 30, // 🔥 NEW
+      completionRate: watchTime / 30,
       repeatViews: watchTime > 20 ? 1 : 0,
     });
 
-    // 🔥 UPDATE CONTENT
     await Content.findByIdAndUpdate(contentId, {
       $inc: {
         views: 1,
-        watchTime: watchTime,
-        engagementScore: watchTime > 20 ? 2 : 1, // 🔥 NEW
+        watchTime,
+        engagementScore: watchTime > 20 ? 2 : 1,
       },
     });
 

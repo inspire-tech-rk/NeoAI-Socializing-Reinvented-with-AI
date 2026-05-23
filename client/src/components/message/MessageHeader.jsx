@@ -1,8 +1,16 @@
+import { API_URL } from "../../config";
+
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 export default function MessageHeader({ selectedUser }) {
   if (!selectedUser) return null;
 
   const dp = selectedUser.dp
-    ? `http://localhost:5000/${selectedUser.dp.replace(/\\/g, "/")}`
+    ? getMediaUrl(selectedUser.dp.replace(/\\/g, "/"))
     : "/default-dp.png";
 
   return (

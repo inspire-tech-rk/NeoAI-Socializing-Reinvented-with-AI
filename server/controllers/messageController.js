@@ -1,7 +1,5 @@
 import Message from "../models/Message.js";
 import User from "../models/Auth.js";
-import fs from "fs";
-import path from "path";
 
 /* SEND MESSAGE */
 export const sendMessage = async (req, res) => {
@@ -16,7 +14,8 @@ export const sendMessage = async (req, res) => {
     let messageType = "text";
 
     if (req.file) {
-      media = req.file.filename;
+      // Cloudinary URL
+      media = req.file.path;
 
       const mime = req.file.mimetype || "";
 
@@ -41,16 +40,15 @@ export const sendMessage = async (req, res) => {
 
     const populated = await Message.findById(message._id).populate(
       "sender receiver",
-      "username profilePicture"
+      "username dp"
     );
 
     res.status(201).json(populated);
   } catch (err) {
-    console.error("SendMessage ERROR:", err);  // ✅ important
+    console.error("SendMessage ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 /* GET CONVERSATION */
 export const getMessages = async (req, res) => {
@@ -64,7 +62,7 @@ export const getMessages = async (req, res) => {
       ],
     })
       .sort({ createdAt: 1 })
-      .populate("sender receiver", "username profilePicture");
+      .populate("sender receiver", "username dp");
 
     res.status(200).json(messages);
   } catch (err) {
@@ -72,7 +70,7 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// ✅ GET MUTUAL FOLLOWERS
+/* GET MUTUAL FOLLOWERS */
 export const getMutualUsers = async (req, res) => {
   try {
     const currentUser = await User.findById(req.user._id);
@@ -81,14 +79,12 @@ export const getMutualUsers = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Find users I follow
     const followingUsers = await User.find({
       _id: { $in: currentUser.following },
     });
 
-    // Filter only those who follow me back
     const mutualUsers = followingUsers.filter((user) =>
-      user.followers.includes(currentUser._id),
+      user.followers.includes(currentUser._id)
     );
 
     res.status(200).json(mutualUsers);
@@ -109,20 +105,12 @@ export const deleteMessage = async (req, res) => {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    // only sender can delete
     if (message.sender.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    // delete media file if exists
-    if (message.media) {
-      const filePath = path.join("uploads", message.media);
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
+    // Only delete message from MongoDB.
+    // Media file remains in Cloudinary.
     await Message.findByIdAndDelete(messageId);
 
     res.json({ message: "Message deleted successfully" });
@@ -132,15 +120,15 @@ export const deleteMessage = async (req, res) => {
   }
 };
 
-// MARK MESSAGES AS SEEN
+/* MARK MESSAGES AS SEEN */
 export const markAsSeen = async (req, res) => {
   try {
     const { userId } = req.params;
 
     await Message.updateMany(
       {
-        sender: userId,          // messages from other user
-        receiver: req.user._id,  // to current user
+        sender: userId,
+        receiver: req.user._id,
         status: { $ne: "seen" },
       },
       {
@@ -157,4 +145,3 @@ export const markAsSeen = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-

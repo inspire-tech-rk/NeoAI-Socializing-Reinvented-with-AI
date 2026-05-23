@@ -10,7 +10,7 @@ import { processCaption } from "../utils/aiProcessor.js"; // ✅ ADD
 export const createPost = async (req, res) => {
   try {
     const isVideo = req.file.mimetype.startsWith("video");
-    const filePath = `/uploads/${req.file.filename}`;
+   const filePath = req.file.path;
     const caption = req.body.caption || "";
 
     /* ------------------------------------------

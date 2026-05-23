@@ -6,11 +6,13 @@ import { API_URL } from "../../config";
 import CreateModal from "../CreateModal";
 import { useLocation } from "react-router-dom";
 
-export default function Sidebar({
-  currentUser,
-  hovered,
-  setHovered,
-}) {
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
+export default function Sidebar({ currentUser, hovered, setHovered }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const location = useLocation();
@@ -29,7 +31,7 @@ export default function Sidebar({
       await axios.post(
         `${API_URL}/api/users/${senderId}/follow`,
         {},
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
       console.log("FOLLOW API CALLED");
@@ -37,13 +39,13 @@ export default function Sidebar({
       await axios.put(
         `${API_URL}/api/notifications/${notificationId}/read`,
         {},
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
       setNotifications((prev) =>
         prev.map((n) =>
-          n._id === notificationId ? { ...n, read: true, accepted: true } : n,
-        ),
+          n._id === notificationId ? { ...n, read: true, accepted: true } : n
+        )
       );
     } catch (err) {
       console.error("Follow back failed", err);
@@ -58,6 +60,7 @@ export default function Sidebar({
       .then((res) => setNotifications(res.data))
       .catch((err) => console.error(err));
   }, [currentUser]);
+
   const formatTime = (date) => {
     const now = new Date();
     const diff = Math.floor((now - new Date(date)) / 1000);
@@ -79,16 +82,14 @@ export default function Sidebar({
           background: "#000",
           color: "#fff",
           borderRight: "1px solid #2c2c2c",
-         transition: "all 0.3s ease",
-          overflowY: "auto", // ✅ FIX
+          transition: "all 0.3s ease",
+          overflowY: "auto",
           overflowX: "hidden",
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* ------------------- TOP ITEMS ------------------- */}
         <div>
-          {/* Sidebar Header with Logo */}
           <h4
             className="fw-bold mb-2 d-flex align-items-center justify-content-center"
             style={{ fontSize: "1.5rem" }}
@@ -104,6 +105,7 @@ export default function Sidebar({
                 transition: "transform 0.2s",
               }}
             />
+
             {hovered && (
               <span style={{ marginLeft: "10px", fontSize: "1.3rem" }}>
                 NeoAI
@@ -111,7 +113,6 @@ export default function Sidebar({
             )}
           </h4>
 
-          {/* Main sidebar items */}
           <SidebarItem
             icon="house-door-fill"
             label="Home"
@@ -121,6 +122,7 @@ export default function Sidebar({
             setSelectedItem={setSelectedItem}
             hovered={hovered}
           />
+
           <SidebarItem
             icon="search"
             label="Search"
@@ -128,6 +130,7 @@ export default function Sidebar({
             setSelectedItem={setSelectedItem}
             hovered={hovered}
           />
+
           <SidebarItem
             icon="robot"
             label="NexAI"
@@ -174,7 +177,6 @@ export default function Sidebar({
               />
             </div>
 
-            {/* 🔴 NUMBER BADGE */}
             {unreadCount > 0 && (
               <span
                 style={{
@@ -206,6 +208,7 @@ export default function Sidebar({
               hovered={hovered}
             />
           </div>
+
           <SidebarItem
             icon="speedometer2"
             label="Dashboard"
@@ -213,6 +216,7 @@ export default function Sidebar({
             setSelectedItem={setSelectedItem}
             hovered={hovered}
           />
+
           <SidebarItem
             icon="person-circle"
             label="Profile"
@@ -245,13 +249,11 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* ------------------- Create Modal ------------------- */}
       <CreateModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
       />
 
-      {/* ---------------- NOTIFICATION PANEL ---------------- */}
       {showNotif && (
         <div
           style={{
@@ -284,7 +286,6 @@ export default function Sidebar({
                   opacity: n.read ? 0.6 : 1,
                 }}
               >
-                {/* LEFT SIDE (DP + TEXT) */}
                 <div
                   style={{
                     display: "flex",
@@ -299,13 +300,13 @@ export default function Sidebar({
                     await axios.put(
                       `${API_URL}/api/notifications/${n._id}/read`,
                       {},
-                      { withCredentials: true },
+                      { withCredentials: true }
                     );
 
                     setNotifications((prev) =>
                       prev.map((item) =>
-                        item._id === n._id ? { ...item, read: true } : item,
-                      ),
+                        item._id === n._id ? { ...item, read: true } : item
+                      )
                     );
 
                     if (n.sender?._id) {
@@ -316,21 +317,20 @@ export default function Sidebar({
                   }}
                 >
                   <img
-                    src={
-                      n.sender?.dp?.startsWith("http")
-                        ? n.sender.dp
-                        : `${API_URL}/${n.sender?.dp || ""}`
-                    }
+                    src={n.sender?.dp ? getMediaUrl(n.sender.dp) : "/avatar.png"}
                     onError={(e) => (e.target.src = "/avatar.png")}
                     width="35"
                     height="35"
                     style={{ borderRadius: "50%", objectFit: "cover" }}
+                    alt="sender"
                   />
 
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     <span style={{ color: "white", fontSize: "14px" }}>
                       <strong>{n.sender?.username}</strong>{" "}
+
                       {n.type === "like" && "liked your post"}
+
                       {n.type === "comment" && (
                         <>
                           commented:{" "}
@@ -340,14 +340,14 @@ export default function Sidebar({
                           </span>
                         </>
                       )}
+
                       {n.type === "follow" && (
                         <div
                           style={{ display: "flex", flexDirection: "column" }}
                         >
                           <span>started following you</span>
 
-                          {n.type === "follow" && !n.accepted && (
-
+                          {!n.accepted && (
                             <button
                               style={{
                                 marginTop: "5px",
@@ -362,7 +362,7 @@ export default function Sidebar({
                               }}
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                e.preventDefault(); // 🔥 ADD THIS
+                                e.preventDefault();
 
                                 await handleAcceptFollow(n.sender._id, n._id);
                               }}
@@ -372,6 +372,7 @@ export default function Sidebar({
                           )}
                         </div>
                       )}
+
                       {n.type === "follow_accept" && (
                         <span>accepted your follow</span>
                       )}
@@ -389,13 +390,11 @@ export default function Sidebar({
                   </div>
                 </div>
 
-                {/* RIGHT SIDE (THUMBNAIL) */}
                 {(n.reel?.media || n.post?.file) && (
                   <>
-                    {/* 1️⃣ If notification is for Reel */}
                     {n.reel?.media ? (
                       <video
-                        src={`${API_URL}/${n.reel.media.replace(/^\/+/, "")}`}
+                        src={getMediaUrl(n.reel.media)}
                         width="45"
                         height="45"
                         muted
@@ -411,11 +410,10 @@ export default function Sidebar({
                         }}
                       />
                     ) : (
-                      /* 2️⃣ If notification is for Post */
                       <>
                         {n.post.file.endsWith(".mp4") ? (
                           <video
-                            src={`${API_URL}/${n.post.file.replace(/^\/+/, "")}`}
+                            src={getMediaUrl(n.post.file)}
                             width="45"
                             height="45"
                             muted
@@ -432,7 +430,7 @@ export default function Sidebar({
                           />
                         ) : (
                           <img
-                            src={`${API_URL}/${n.post.file.replace(/^\/+/, "")}`}
+                            src={getMediaUrl(n.post.file)}
                             width="45"
                             height="45"
                             alt="post"
@@ -457,7 +455,6 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* ---------------- REEL PREVIEW MODAL ---------------- */}
       {previewReel && (
         <div
           style={{
@@ -481,7 +478,7 @@ export default function Sidebar({
             onClick={(e) => e.stopPropagation()}
           >
             <video
-              src={`${API_URL}/${previewReel.media.replace(/^\/+/, "")}`}
+              src={getMediaUrl(previewReel.media)}
               controls
               autoPlay
               style={{ width: "100%" }}
@@ -518,7 +515,7 @@ function SidebarItem({
           color: isSelected ? "#0d6efd" : "#fff",
           transition: "background 0.2s, color 0.2s",
           borderBottom: "1px solid #2c2c2c",
-          gap: hovered ? "12px" : "0px", // small gap when collapsed
+          gap: hovered ? "12px" : "0px",
           justifyContent: hovered ? "flex-start" : "center",
           overflow: "hidden",
         }}
@@ -531,6 +528,7 @@ function SidebarItem({
             flexShrink: 0,
           }}
         ></i>
+
         {hovered && (
           <span style={{ fontWeight: isSelected ? "600" : "400" }}>
             {label}

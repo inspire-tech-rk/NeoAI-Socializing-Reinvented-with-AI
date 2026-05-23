@@ -3,6 +3,12 @@ import { API_URL } from "../../config";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 export default function StoryViewer({
   stories: initialStories = [],
   onClose,
@@ -37,7 +43,6 @@ export default function StoryViewer({
     };
   }, [index, stories.length]);
 
-  // Reset stories when parent passes new stories
   useEffect(() => {
     setStories(initialStories);
     setIndex(0);
@@ -56,7 +61,6 @@ export default function StoryViewer({
     if (index > 0) setIndex(index - 1);
   };
 
-  // Auto-play / progress tracking
   useEffect(() => {
     if (!story) return;
 
@@ -85,10 +89,13 @@ export default function StoryViewer({
     } else {
       setProgress(0);
       let start = Date.now();
+
       intervalRef.current = setInterval(() => {
         const elapsed = Date.now() - start;
         const percent = Math.min((elapsed / 4000) * 100, 100);
+
         setProgress(percent);
+
         if (percent >= 100) {
           clearInterval(intervalRef.current);
           nextStory();
@@ -99,7 +106,6 @@ export default function StoryViewer({
     return () => clearInterval(intervalRef.current);
   }, [index, story, muted]);
 
-  // Smooth delete handler
   const handleDelete = async (storyId) => {
     if (!onDeleteStory) return;
 
@@ -108,13 +114,11 @@ export default function StoryViewer({
     setStories((prev) => {
       const remaining = prev.filter((s) => s._id !== storyId);
 
-      // 🔥 Close viewer ONLY if no stories left
       if (remaining.length === 0) {
         onClose();
         return [];
       }
 
-      // 🔁 Move index safely
       if (index >= remaining.length) {
         setIndex(remaining.length - 1);
       }
@@ -139,7 +143,6 @@ export default function StoryViewer({
         x < width / 2 ? prevStory() : nextStory();
       }}
     >
-      {/* CLOSE BUTTON */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -163,7 +166,6 @@ export default function StoryViewer({
         ✕
       </button>
 
-      {/* STORY CONTAINER */}
       <div
         style={{
           position: "relative",
@@ -179,24 +181,22 @@ export default function StoryViewer({
         }}
       >
         <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          {/* MEDIA */}
           {story.type === "video" ? (
             <video
               key={story._id}
               ref={videoRef}
-              src={`${API_URL}/${story.file}`}
+              src={getMediaUrl(story.file)}
               playsInline
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
             <img
-              src={`${API_URL}/${story.file}`}
+              src={getMediaUrl(story.file)}
               alt="story"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           )}
 
-          {/* MULTI-PROGRESS BARS */}
           <div
             style={{
               position: "absolute",
@@ -232,7 +232,6 @@ export default function StoryViewer({
             ))}
           </div>
 
-          {/* USER INFO */}
           <div
             onClick={(e) => {
               e.stopPropagation();
@@ -253,7 +252,7 @@ export default function StoryViewer({
             <img
               src={
                 loggedInUser?.dp
-                  ? `${API_URL}/${loggedInUser.dp}`
+                  ? getMediaUrl(loggedInUser.dp)
                   : "/default-avatar.png"
               }
               alt="user"
@@ -265,6 +264,7 @@ export default function StoryViewer({
                 border: "1px solid rgba(255,255,255,0.6)",
               }}
             />
+
             <span
               style={{
                 color: "#fff",
@@ -277,7 +277,6 @@ export default function StoryViewer({
             </span>
           </div>
 
-          {/* VIDEO CONTROLS + DELETE */}
           <div
             className="story-controls"
             style={{
@@ -291,12 +290,12 @@ export default function StoryViewer({
           >
             {story.type === "video" && (
               <>
-                {/* PLAY / PAUSE */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isPlaying) videoRef.current.pause();
                     else videoRef.current.play();
+
                     setIsPlaying(!isPlaying);
                   }}
                   style={controlBtnStyle}
@@ -305,7 +304,6 @@ export default function StoryViewer({
                   {isPlaying ? "⏸" : "▶"}
                 </button>
 
-                {/* MUTE / UNMUTE */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -320,8 +318,6 @@ export default function StoryViewer({
               </>
             )}
 
-            {/* DELETE STORY */}
-            {/* DELETE STORY — only owner */}
             {story.user === loggedInUser?._id && (
               <button
                 onClick={(e) => {
@@ -341,7 +337,6 @@ export default function StoryViewer({
   );
 }
 
-// Reusable button style
 const controlBtnStyle = {
   background: "rgba(0,0,0,0.4)",
   border: "none",

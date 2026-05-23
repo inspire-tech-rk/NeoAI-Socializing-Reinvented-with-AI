@@ -2,6 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { API_URL } from "../../config";
 import authAxios from "../../api/authAxios";
 
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 function HighlightVideo({
   src,
   muted,
@@ -53,7 +59,7 @@ function HighlightVideo({
         height: "100%",
         objectFit: "contain",
         background: "black",
-        display: "block", // 🔥 prevents inline gap
+        display: "block",
       }}
     >
       <video
@@ -69,7 +75,7 @@ function HighlightVideo({
         }}
         onEnded={onEnded}
         onTimeUpdate={(e) => {
-          if (paused) return; // ⏸ STOP PROGRESS WHEN PAUSED
+          if (paused) return;
 
           const video = e.currentTarget;
           if (video.duration) {
@@ -83,12 +89,10 @@ function HighlightVideo({
           objectFit: "contain",
           background: "black",
           cursor: "pointer",
-          
         }}
         onError={() => setError(true)}
       />
 
-      {/* 🔊 TAP FOR SOUND */}
       {muted && (
         <div
           style={{
@@ -126,21 +130,16 @@ export default function HighlightViewerModal({
   const [itemIndex, setItemIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [dragStartX, setDragStartX] = useState(null);
-  const [soundOn, setSoundOn] = useState(false); // 🔊 GLOBAL SOUND
+  const [soundOn, setSoundOn] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const currentHighlight = highlights[highlightIndex];
   const items = currentHighlight.items || [];
   const currentItem = items[itemIndex];
-  const [isDragging, setIsDragging] = useState(false);
-  // 📱 Instagram-style long press
+
   const longPressTimer = useRef(null);
   const longPressTriggered = useRef(false);
 
-  const togglePause = () => {
-    setPaused((p) => !p);
-  };
-
-  /* 🔄 AUTO PROGRESS (IMAGE ONLY) */
   useEffect(() => {
     if (paused) return;
 
@@ -160,20 +159,11 @@ export default function HighlightViewerModal({
     }
   }, [highlightIndex, itemIndex, paused, currentItem]);
 
-  // ⌨️ KEYBOARD NAVIGATION (Instagram style)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "ArrowRight") {
-        nextItem();
-      }
-
-      if (e.key === "ArrowLeft") {
-        prevItem();
-      }
-
-      if (e.key === "Escape") {
-        onClose();
-      }
+      if (e.key === "ArrowRight") nextItem();
+      if (e.key === "ArrowLeft") prevItem();
+      if (e.key === "Escape") onClose();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -195,7 +185,6 @@ export default function HighlightViewerModal({
   const handleCenterTap = () => {
     setPaused((p) => !p);
   };
-  
 
   const nextItem = () => {
     if (itemIndex < items.length - 1) {
@@ -223,7 +212,7 @@ export default function HighlightViewerModal({
 
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      setPaused(true); // ⏸ PAUSE
+      setPaused(true);
     }, 200);
   };
 
@@ -231,7 +220,7 @@ export default function HighlightViewerModal({
     clearTimeout(longPressTimer.current);
 
     if (longPressTriggered.current) {
-      setPaused(false); // ▶ RESUME
+      setPaused(false);
       return;
     }
 
@@ -241,69 +230,42 @@ export default function HighlightViewerModal({
 
   const deleteHighlight = async () => {
     if (!window.confirm("Delete this highlight?")) return;
+
     await authAxios.delete(`/highlights/${currentHighlight._id}`);
     onDeleted();
     onClose();
   };
 
-  const onMouseDown = (e) => {
-    setDragStartX(e.clientX);
-    setIsDragging(true);
-  };
+  const markAsSeen = (highlightId) => {
+    const seen = JSON.parse(localStorage.getItem("seenHighlights")) || [];
 
-  const onMouseUp = (e) => {
-    if (dragStartX === null) return;
-
-    const diff = e.clientX - dragStartX;
-
-    if (diff > 60) prevItem();
-    if (diff < -60) nextItem();
-
-    setDragStartX(null);
-    setIsDragging(false);
-  };
-  const onMouseLeave = () => {
-    setIsDragging(false);
-    setDragStartX(null);
+    if (!seen.includes(highlightId)) {
+      localStorage.setItem(
+        "seenHighlights",
+        JSON.stringify([...seen, highlightId])
+      );
+    }
   };
 
   if (!currentItem) return null;
 
-    const markAsSeen = () => {
-    const seen =
-      JSON.parse(localStorage.getItem("seenHighlights")) || [];
-
-    if (!seen.includes(highlight._id)) {
-      localStorage.setItem(
-        "seenHighlights",
-        JSON.stringify([...seen, highlight._id])
-      );
-    }
-  };
-  
-
-
   return (
     <>
-      {/* OVERLAY */}
       <div
         className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-      style={{ zIndex: 3000, backgroundColor: "rgba(0,0,0,0.7)" }}
+        style={{ zIndex: 3000, backgroundColor: "rgba(0,0,0,0.7)" }}
         onClick={onClose}
       />
 
-      {/* 🟢 HORIZONTAL MODAL */}
       <div
         className="position-fixed top-50 start-50 translate-middle d-flex"
         style={{
           zIndex: 3001,
           userSelect: "none",
           maxHeight: "98vh",
-          overflow: "hidden", // 🔥 stop modal scroll
-          
+          overflow: "hidden",
         }}
       >
-        {/* ◀ LEFT PREVIEWS */}
         <div
           onWheel={(e) => e.stopPropagation()}
           style={{
@@ -312,42 +274,42 @@ export default function HighlightViewerModal({
             display: "flex",
             flexDirection: "column",
             gap: "12px",
-            maxHeight: "700px", // same as center
-            overflowY: "auto", // 🔥 only this scrolls
+            maxHeight: "700px",
+            overflowY: "auto",
             paddingRight: "4px",
           }}
         >
           {highlights
             .slice(Math.max(0, highlightIndex - 2), highlightIndex)
             .map((h) => (
-                <div
+              <div
                 key={h._id}
                 onClick={() => {
                   setHighlightIndex(
                     highlights.findIndex((x) => x._id === h._id)
                   );
                   setItemIndex(0);
-                  markAsSeen(); // ✅ Mark as seen immediately
+                  markAsSeen(h._id);
                 }}
                 style={{
                   height: "220px",
-                  minHeight: "220px", // 🔥 prevents shrink
+                  minHeight: "220px",
                   borderRadius: "10px",
                   overflow: "hidden",
                   cursor: "pointer",
                   opacity: 0.5,
-                  flexShrink: 0, // 🔥 CRITICAL
+                  flexShrink: 0,
                 }}
               >
                 <img
-                  src={`${API_URL}/${h.cover}`}
+                  src={getMediaUrl(h.cover)}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  alt="highlight"
                 />
               </div>
             ))}
         </div>
 
-        {/* 🟢 CENTER ACTIVE HIGHLIGHT (UNCHANGED LOGIC) */}
         <div
           className="d-flex flex-column"
           style={{
@@ -359,7 +321,6 @@ export default function HighlightViewerModal({
             overflow: "hidden",
           }}
         >
-          {/* PROGRESS */}
           <div className="d-flex gap-1 px-2 pt-2">
             {items.map((_, i) => (
               <div
@@ -383,9 +344,9 @@ export default function HighlightViewerModal({
             ))}
           </div>
 
-          {/* HEADER */}
           <div className="d-flex justify-content-between align-items-center px-3 py-2 text-white">
             <strong>{currentHighlight.title}</strong>
+
             <div className="d-flex gap-3 align-items-center">
               {currentItem.file.endsWith(".mp4") && (
                 <i
@@ -413,18 +374,17 @@ export default function HighlightViewerModal({
             </div>
           </div>
 
-          {/* CONTENT */}
           <div
             className="flex-grow-1 position-relative"
             style={{
               cursor: paused ? "grabbing" : "pointer",
-              height: "100%", // 🔥 FIX
-              overflow: "hidden", // 🔥 FIX
+              height: "100%",
+              overflow: "hidden",
             }}
           >
             {currentItem.file.endsWith(".mp4") ? (
               <HighlightVideo
-                src={`${API_URL}/${currentItem.file}`}
+                src={getMediaUrl(currentItem.file)}
                 muted={!soundOn}
                 onToggleSound={() => setSoundOn((v) => !v)}
                 onEnded={nextItem}
@@ -433,28 +393,13 @@ export default function HighlightViewerModal({
               />
             ) : (
               <img
-                src={`${API_URL}/${currentItem.file}`}
+                src={getMediaUrl(currentItem.file)}
                 className="w-100 h-100"
                 style={{ objectFit: "contain" }}
+                alt="highlight item"
               />
             )}
-            {currentItem.file.endsWith(".mp4") ? (
-              <HighlightVideo
-                src={`${API_URL}/${currentItem.file}`}
-                muted={!soundOn}
-                onToggleSound={() => setSoundOn((v) => !v)}
-                onEnded={nextItem}
-                onProgress={(p) => setProgress(p)}
-                paused={paused}
-              />
-            ) : (
-              <img
-                src={`${API_URL}/${currentItem.file}`}
-                className="w-100 h-100"
-                style={{ objectFit: "contain" }}
-              />
-            )}
-            /* 🟢 CENTER TAP → PLAY / PAUSE (ADD THIS EXACTLY HERE) */
+
             <div
               onClick={(e) => {
                 e.stopPropagation();
@@ -466,10 +411,11 @@ export default function HighlightViewerModal({
                 left: "25%",
                 width: "50%",
                 height: "50%",
-                zIndex: 8, // above nav, below pause icon
+                zIndex: 8,
                 cursor: "pointer",
               }}
             />
+
             {paused && (
               <div
                 style={{
@@ -481,12 +427,10 @@ export default function HighlightViewerModal({
                 }}
               />
             )}
-            {/* ⏸ PAUSE ICON OVERLAY */}
+
             {paused && (
               <i
-                className={`bi ${
-                  paused ? "bi-play-circle-fill" : "bi-pause-circle-fill"
-                }`}
+                className="bi bi-play-circle-fill"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPaused((p) => !p);
@@ -498,18 +442,18 @@ export default function HighlightViewerModal({
                   transform: "translate(-50%, -50%)",
                   fontSize: "72px",
                   color: "white",
-                  opacity: paused ? 0.9 : 0.4,
+                  opacity: 0.9,
                   zIndex: 20,
                   cursor: "pointer",
                   transition: "opacity 0.2s ease",
                 }}
               />
             )}
-            {/* LEFT AREA (PREV) */}
+
             <div
               style={{
                 position: "absolute",
-                left:0,
+                left: 0,
                 top: 0,
                 width: "50%",
                 height: "100%",
@@ -521,7 +465,7 @@ export default function HighlightViewerModal({
               onTouchStart={startPress}
               onTouchEnd={() => endPress("prev")}
             />
-            {/* RIGHT AREA (NEXT) */}
+
             <div
               style={{
                 position: "absolute",
@@ -540,7 +484,6 @@ export default function HighlightViewerModal({
           </div>
         </div>
 
-        {/* ▶ RIGHT PREVIEWS */}
         <div
           onWheel={(e) => e.stopPropagation()}
           style={{
@@ -549,8 +492,8 @@ export default function HighlightViewerModal({
             display: "flex",
             flexDirection: "column",
             gap: "12px",
-            maxHeight: "700px", // same as center
-            overflowY: "auto", // 🔥 only this scrolls
+            maxHeight: "700px",
+            overflowY: "auto",
             paddingRight: "4px",
           }}
         >
@@ -560,21 +503,22 @@ export default function HighlightViewerModal({
               onClick={() => {
                 setHighlightIndex(highlights.findIndex((x) => x._id === h._id));
                 setItemIndex(0);
-                markAsSeen(); // ✅ Mark as seen immediately
+                markAsSeen(h._id);
               }}
               style={{
                 height: "220px",
-                minHeight: "220px", // 🔥 prevents shrink
+                minHeight: "220px",
                 borderRadius: "10px",
                 overflow: "hidden",
                 cursor: "pointer",
                 opacity: 0.5,
-                flexShrink: 0, // 🔥 CRITICAL
+                flexShrink: 0,
               }}
             >
               <img
-                src={`${API_URL}/${h.cover}`}
+                src={getMediaUrl(h.cover)}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                alt="highlight"
               />
             </div>
           ))}

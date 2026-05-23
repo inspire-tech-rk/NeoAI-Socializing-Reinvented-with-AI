@@ -3,6 +3,12 @@ import axios from "axios";
 import { API_URL } from "../../config";
 import { AuthContext } from "../../context/AuthContext";
 
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 export default function MessageList({ messages = [], selectedUser }) {
   const [localMessages, setLocalMessages] = useState(messages);
   const [translations, setTranslations] = useState({});
@@ -11,7 +17,6 @@ export default function MessageList({ messages = [], selectedUser }) {
   const bottomRef = useRef(null);
 
   const [menu, setMenu] = useState(null);
-  // {x, y, message}
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -21,45 +26,39 @@ export default function MessageList({ messages = [], selectedUser }) {
     setLocalMessages(messages);
   }, [messages]);
 
-  // CLOSE MENU WHEN CLICK ANYWHERE
   useEffect(() => {
     const closeMenu = () => setMenu(null);
     window.addEventListener("click", closeMenu);
+
     return () => window.removeEventListener("click", closeMenu);
   }, []);
 
-  // DELETE MESSAGE
   const deleteMessage = async (id) => {
     try {
       await axios.delete(`${API_URL}/api/messages/${id}`, {
         withCredentials: true,
       });
 
-      // remove message from UI without reload
       setLocalMessages((prev) => prev.filter((msg) => msg._id !== id));
-
       setMenu(null);
     } catch (err) {
       console.error("Delete message error", err);
     }
   };
 
-  // COPY TEXT
   const copyText = (text) => {
     navigator.clipboard.writeText(text);
     setMenu(null);
   };
 
-  // DOWNLOAD MEDIA
   const downloadMedia = (media) => {
     const link = document.createElement("a");
-    link.href = `http://localhost:5000/uploads/${media}`;
+    link.href = getMediaUrl(media);
     link.download = media;
     link.click();
     setMenu(null);
   };
 
-  // RIGHT CLICK HANDLER
   const handleRightClick = (e, msg) => {
     e.preventDefault();
 
@@ -77,12 +76,11 @@ export default function MessageList({ messages = [], selectedUser }) {
 
       const res = await fetch(
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(
-          text,
-        )}`,
+          text
+        )}`
       );
 
       const data = await res.json();
-
       const translatedText = data[0].map((item) => item[0]).join("");
 
       setTranslations((prev) => ({
@@ -95,6 +93,7 @@ export default function MessageList({ messages = [], selectedUser }) {
       console.error("Translation error", err);
     }
   };
+
   const speakText = (text, lang = "hi-IN") => {
     if (!text) return;
 
@@ -103,7 +102,7 @@ export default function MessageList({ messages = [], selectedUser }) {
     speech.rate = 1;
     speech.pitch = 1;
 
-    window.speechSynthesis.cancel(); // stop previous
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(speech);
   };
 
@@ -154,10 +153,8 @@ export default function MessageList({ messages = [], selectedUser }) {
                 cursor: "pointer",
               }}
             >
-              {/* TEXT */}
               {msg.text && (
                 <div>
-                  {/* Original text + status + speak button in one line */}
                   <div
                     style={{
                       display: "flex",
@@ -166,6 +163,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                     }}
                   >
                     <span style={{ flex: 1 }}>{msg.text}</span>
+
                     {isMe && (
                       <span style={{ fontSize: "11px", opacity: 0.7 }}>
                         {msg.status === "sent" && "✓"}
@@ -174,7 +172,6 @@ export default function MessageList({ messages = [], selectedUser }) {
                       </span>
                     )}
 
-                    {/* 🔊 SPEAK ORIGINAL */}
                     <span
                       onClick={() => speakText(msg.text, "en-US")}
                       style={{ marginLeft: "8px", cursor: "pointer" }}
@@ -183,7 +180,6 @@ export default function MessageList({ messages = [], selectedUser }) {
                     </span>
                   </div>
 
-                  {/* 🌐 TRANSLATED TEXT - UNDER ORIGINAL */}
                   {translations[msg._id] && (
                     <div
                       style={{
@@ -193,7 +189,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                       }}
                     >
                       🌐 {translations[msg._id]}
-                      {/* 🔊 SPEAK TRANSLATION */}
+
                       <span
                         onClick={() =>
                           speakText(translations[msg._id], "hi-IN")
@@ -207,7 +203,6 @@ export default function MessageList({ messages = [], selectedUser }) {
                 </div>
               )}
 
-              {/* IMAGE */}
               {msg.messageType === "image" && msg.media && (
                 <div
                   style={{
@@ -217,7 +212,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                   }}
                 >
                   <img
-                    src={`http://localhost:5000/uploads/${msg.media}`}
+                    src={getMediaUrl(msg.media)}
                     alt="sent-media"
                     style={{
                       maxWidth: "220px",
@@ -225,6 +220,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                       display: "block",
                     }}
                   />
+
                   {isMe && (
                     <span
                       style={{
@@ -243,7 +239,6 @@ export default function MessageList({ messages = [], selectedUser }) {
                 </div>
               )}
 
-              {/* VIDEO */}
               {msg.messageType === "video" && msg.media && (
                 <div
                   style={{
@@ -253,7 +248,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                   }}
                 >
                   <video
-                    src={`http://localhost:5000/uploads/${msg.media}`}
+                    src={getMediaUrl(msg.media)}
                     controls
                     style={{
                       maxWidth: "220px",
@@ -261,6 +256,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                       display: "block",
                     }}
                   />
+
                   {isMe && (
                     <span
                       style={{
@@ -279,7 +275,6 @@ export default function MessageList({ messages = [], selectedUser }) {
                 </div>
               )}
 
-              {/* FILE */}
               {msg.messageType === "file" && msg.media && (
                 <div
                   style={{
@@ -289,7 +284,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                   }}
                 >
                   <a
-                    href={`http://localhost:5000/uploads/${msg.media}`}
+                    href={getMediaUrl(msg.media)}
                     target="_blank"
                     rel="noreferrer"
                     style={{
@@ -300,6 +295,7 @@ export default function MessageList({ messages = [], selectedUser }) {
                   >
                     📎 Download File
                   </a>
+
                   {isMe && (
                     <span
                       style={{
@@ -322,7 +318,6 @@ export default function MessageList({ messages = [], selectedUser }) {
         );
       })}
 
-      {/* RIGHT CLICK MENU */}
       {menu && (
         <div
           style={{

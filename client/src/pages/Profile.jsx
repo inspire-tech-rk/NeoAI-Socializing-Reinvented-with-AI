@@ -9,34 +9,38 @@ import { useParams } from "react-router-dom";
 import StoryRing from "../components/story/StoryRing";
 import StoryViewer from "../components/story/StoryViewer";
 
+const getMediaUrl = (file) => {
+  if (!file) return "";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 // ---------------- PostCard Component ----------------
 function PostCard({ post, onDelete, onSelect }) {
-  const cleanPath = post.file.startsWith("/") ? post.file : `/${post.file}`;
-  const isVideo = post.type === "video" || /\.(mp4|webm|mov)$/i.test(cleanPath);
+  const mediaUrl = getMediaUrl(post.file);
+
+  const isVideo =
+    post.type === "video" || /\.(mp4|webm|mov)$/i.test(post.file || "");
 
   return (
     <div className="col-6 col-xl-4">
       <div className="position-relative">
         {isVideo ? (
           <video
-            src={`${API_URL}${cleanPath}`}
+            src={mediaUrl}
             preload="metadata"
             muted
             className="w-100 rounded"
             style={{ height: "220px", objectFit: "cover" }}
-            onClick={() =>
-              onSelect({ ...post, video: `${API_URL}${cleanPath}` })
-            }
+            onClick={() => onSelect({ ...post, video: mediaUrl })}
           />
         ) : (
           <img
-            src={`${API_URL}${cleanPath}`}
+            src={mediaUrl}
             className="w-100 rounded"
             style={{ height: "220px", objectFit: "cover" }}
             alt="post"
-            onClick={() =>
-              onSelect({ ...post, image: `${API_URL}${cleanPath}` })
-            }
+            onClick={() => onSelect({ ...post, image: mediaUrl })}
           />
         )}
 
@@ -76,13 +80,7 @@ function RightSlidePanel({ title, users, onClose }) {
             users.map((u) => (
               <div key={u._id} className="user-row">
                 <img
-                  src={
-                    u.dp
-                      ? u.dp.startsWith("http")
-                        ? u.dp
-                        : `${API_URL}/${u.dp}`
-                      : "/default-dp.png"
-                  }
+                  src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
                   onError={(e) => (e.target.src = "/default-dp.png")}
                   className="rounded-circle"
                   width={36}
@@ -142,7 +140,7 @@ export default function Profile() {
 
     const followingIds =
       loggedInUser.following?.map((id) =>
-        typeof id === "object" ? id._id : id,
+        typeof id === "object" ? id._id : id
       ) || [];
 
     setIsFollowing(followingIds.includes(profileUser._id));
@@ -158,7 +156,7 @@ export default function Profile() {
           `${API_URL}/api/posts/user/${profileUser._id}`,
           {
             withCredentials: true,
-          },
+          }
         );
         setProfilePosts(res.data);
       } catch (err) {
@@ -172,6 +170,7 @@ export default function Profile() {
   // ---------------- STORY CHECK ----------------
   useEffect(() => {
     if (!profileUser) return;
+
     axios
       .get(`${API_URL}/api/stories/has/${profileUser._id}`, {
         withCredentials: true,
@@ -184,6 +183,7 @@ export default function Profile() {
   useEffect(() => {
     const handler = (e) => {
       const newPost = e.detail;
+
       if (newPost?.user?._id === profileUser?._id) {
         setProfilePosts((prev) => [newPost, ...prev]);
       }
@@ -196,9 +196,11 @@ export default function Profile() {
   // ---------------- DELETE POST ----------------
   const handleDelete = async (postId) => {
     if (!window.confirm("Delete this post?")) return;
+
     await axios.delete(`${API_URL}/api/posts/${postId}`, {
       withCredentials: true,
     });
+
     setProfilePosts((prev) => prev.filter((p) => p._id !== postId));
   };
 
@@ -215,9 +217,11 @@ export default function Profile() {
   // ---------------- STORY OPEN ----------------
   const openStory = async () => {
     if (stories.length) return setShowStory(true);
+
     const res = await axios.get(`${API_URL}/api/stories/${profileUser._id}`, {
       withCredentials: true,
     });
+
     if (res.data?.length) {
       setStories(res.data);
       setShowStory(true);
@@ -241,6 +245,7 @@ export default function Profile() {
             style={{ maxHeight: "calc(100vh - 40px)", overflowY: "auto" }}
           >
             <h6 className="mb-3">Posts</h6>
+
             <div className="row g-3">
               {profilePosts.map((post) => (
                 <PostCard
@@ -260,15 +265,13 @@ export default function Profile() {
             className="card bg-dark text-white rounded-4 p-4 text-center sidebar"
             style={{ position: "sticky", top: "20px" }}
           >
-            {/* 🔥 FIXED PROFILE DP */}
+            {/* PROFILE DP */}
             <div onClick={openStory} style={{ cursor: "pointer" }}>
               <img
                 src={
-                  profileUser.dp?.startsWith("http")
-                    ? profileUser.dp
-                    : profileUser.dp
-                      ? `${API_URL}/${profileUser.dp}`
-                      : "/default-dp.png"
+                  profileUser.dp
+                    ? getMediaUrl(profileUser.dp)
+                    : "/default-dp.png"
                 }
                 onError={(e) => (e.target.src = "/default-dp.png")}
                 className="rounded-circle"
@@ -289,7 +292,7 @@ export default function Profile() {
             <h5 className="mt-3">@{profileUser.username}</h5>
             <br />
 
-            {/* ✅ FOLLOW BUTTON */}
+            {/* FOLLOW BUTTON */}
             {loggedInUser._id !== profileUser._id && (
               <button
                 className="btn btn-primary btn-sm mt-2"
@@ -298,7 +301,7 @@ export default function Profile() {
                     const res = await axios.post(
                       `${API_URL}/api/users/${profileUser._id}/follow`,
                       {},
-                      { withCredentials: true },
+                      { withCredentials: true }
                     );
 
                     if (res.data.requested) {
@@ -321,6 +324,7 @@ export default function Profile() {
                 <strong>{profilePosts.length}</strong>
                 <div>Posts</div>
               </div>
+
               <div
                 style={{ cursor: "pointer" }}
                 onClick={() => setShowFollowersModal(true)}
@@ -328,6 +332,7 @@ export default function Profile() {
                 <strong>{profileUser.followers?.length || 0}</strong>
                 <div>Followers</div>
               </div>
+
               <div
                 style={{ cursor: "pointer" }}
                 onClick={() => setShowFollowingModal(true)}
@@ -355,7 +360,9 @@ export default function Profile() {
       {showStory && (
         <StoryViewer stories={stories} onClose={() => setShowStory(false)} />
       )}
+
       <EditProfileModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
+
       {selectedPost && (
         <PostPreviewModal
           post={selectedPost}
@@ -366,14 +373,15 @@ export default function Profile() {
       {showFollowersModal && (
         <RightSlidePanel
           title="Followers"
-          users={profileUser.followers}
+          users={profileUser.followers || []}
           onClose={() => setShowFollowersModal(false)}
         />
       )}
+
       {showFollowingModal && (
         <RightSlidePanel
           title="Following"
-          users={profileUser.following}
+          users={profileUser.following || []}
           onClose={() => setShowFollowingModal(false)}
         />
       )}
