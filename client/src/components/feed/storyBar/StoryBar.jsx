@@ -5,6 +5,7 @@ import AddStoryButton from "./AddStoryButton";
 import ScrollButtons from "./ScrollButtons";
 import StoryViewer from "../../story/StoryViewer";
 import "./storyBar.css";
+import { API_URL } from "../../../config";
 
 export default function StoryBar() {
   const [stories, setStories] = useState([]);
@@ -14,7 +15,7 @@ export default function StoryBar() {
   // Fetch stories
   const fetchStories = useCallback(async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/stories/feed", {
+      const res = await axios.get(`${API_URL}/api/stories/feed`, {
         withCredentials: true,
       });
       setStories(res.data);
@@ -31,7 +32,7 @@ export default function StoryBar() {
 
   const handleDeleteStory = async (storyId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/stories/${storyId}`, {
+      await axios.delete(`${API_URL}/api/stories/${storyId}`, {
         withCredentials: true,
       });
       setStories((prev) =>

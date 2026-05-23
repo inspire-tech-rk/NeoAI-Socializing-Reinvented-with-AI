@@ -3,6 +3,7 @@ import axios from "axios";
 import PostCard from "../components/feed/postCard/PostCard";
 import StoryBar from "../components/feed/storyBar/StoryBar";
 import Suggestions from "../components/feed/suggestions/Suggestions";
+import { API_URL } from "../config";
 
 export default function FeedPage() {
   const [posts, setPosts] = useState([]);
@@ -21,7 +22,7 @@ export default function FeedPage() {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/posts/feed?page=${page}&limit=5`,
+        `${API_URL}/api/posts/feed?page=${page}&limit=5`,
         { withCredentials: true }
       );
 

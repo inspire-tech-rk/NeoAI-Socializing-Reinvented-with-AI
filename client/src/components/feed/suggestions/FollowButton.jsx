@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { API_URL } from "../../../config";
 
 export default function FollowButton({
   userId,
@@ -18,7 +19,7 @@ export default function FollowButton({
 
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/users/${userId}/follow`,
+        `${API_URL}/api/users/${userId}/follow`,
         {},
         { withCredentials: true }
       );
