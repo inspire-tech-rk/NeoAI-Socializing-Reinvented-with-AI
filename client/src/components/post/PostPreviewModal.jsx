@@ -146,7 +146,10 @@ export default function PostPreviewModal({ post, onClose }) {
                 src={mediaUrl}
                 alt="post"
                 className="w-100 h-100"
-                style={{ objectFit: "cover" }}
+                style={{
+                  objectFit: "contain",
+                  background: "black",
+                }}
               />
             )}
 
