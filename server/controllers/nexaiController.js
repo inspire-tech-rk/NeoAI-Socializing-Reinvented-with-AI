@@ -127,9 +127,9 @@ export const askNexAI = async (req, res) => {
       return res.json({
         answer: text,
       });
-    } catch (err) {
-     
-    }
+   } catch (err) {
+  console.error("OpenRouter failed:", err.response?.data || err.message);
+}
 
     // ==================================================
     // 🟣 2. GROQ (BACKUP)
@@ -175,9 +175,9 @@ export const askNexAI = async (req, res) => {
       return res.json({
         answer: text,
       });
-    } catch (err) {
-      
-    }
+   } catch (err) {
+  console.error("Groq failed:", err.response?.data || err.message);
+}
 
     // ==================================================
     // 🟢 3. GEMINI (LAST FALLBACK)
@@ -222,8 +222,8 @@ export const askNexAI = async (req, res) => {
         answer: text,
       });
     } catch (err) {
-      
-    }
+  console.error("Gemini failed:", err.response?.data || err.message);
+}
 
     // ==================================================
     // 🔴 CACHE FALLBACK

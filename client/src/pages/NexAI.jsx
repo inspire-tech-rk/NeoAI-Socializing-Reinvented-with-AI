@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { API_URL } from "../config";
 
 export default function NexAI() {
   const [query, setQuery] = useState("");
@@ -31,7 +32,7 @@ const shouldAutoScroll = useRef(true);
   const loadChats = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/nexai/history/${userId}`
+        `${API_URL}/api/nexai/history/${userId}`
       );
 
       setMessages(res.data);
@@ -138,7 +139,7 @@ const handleScroll = () => {
     try {
       // ✅ SEND TO BACKEND
       const res = await axios.post(
-        "http://localhost:5000/api/nexai/ask",
+        `${API_URL}/api/nexai/ask`,
         {
           question: query,
           history: updatedMessages,
@@ -187,7 +188,7 @@ const handleScroll = () => {
   // =========================================
   const clearChat = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/nexai/clear/${userId}`);
+      await axios.delete(`${API_URL}/api/nexai/clear/${userId}`);
 
       setMessages([]);
     } catch (err) {
