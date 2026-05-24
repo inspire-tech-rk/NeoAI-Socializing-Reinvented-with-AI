@@ -9,9 +9,12 @@ export default function PostMeta({ post }) {
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/comments/${post._id}`, {
-          withCredentials: true,
-        });
+       const res = await axios.get(
+  `${API_URL}/api/comments/post/${post._id}`,
+  {
+    withCredentials: true,
+  }
+);
 
         setComments(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
