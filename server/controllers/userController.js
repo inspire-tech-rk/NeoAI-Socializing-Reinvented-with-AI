@@ -65,37 +65,33 @@ export const getSuggestions = async (req, res) => {
   try {
     const currentUserId = req.user._id;
 
-    // Fetch current user's following list
-    const currentUser = await User.findById(currentUserId)
-      .select("following")
-      .populate("following", "_id username");
+    const currentUser = await User.findById(currentUserId).select("following");
 
-    const followingIds = (currentUser.following || []).map((u) =>
-      u._id.toString(),
+    const followingIds = (currentUser.following || []).map((id) =>
+      id.toString()
     );
 
-    // Fetch users excluding self and already-followed users
-    let users = await User.find({
-      _id: { $nin: [currentUserId, ...followingIds] },
+    const excludeIds = [currentUserId.toString(), ...followingIds];
+
+    const users = await User.find({
+      _id: { $nin: excludeIds },
     })
       .select("username dp followers")
       .limit(10)
       .populate("followers", "_id username");
 
-    // Prepare suggestion objects
     const suggestions = users.map((user) => {
-      // Find mutual followers
       const mutualFollowers = user.followers.filter((follower) =>
-        followingIds.includes(follower._id.toString()),
+        followingIds.includes(follower._id.toString())
       );
+
       const mutualNames = mutualFollowers.map((f) => f.username);
 
       return {
         _id: user._id,
         username: user.username,
-       dp: user.dp || "",
-
-        isFollowing: false, // default, frontend will toggle
+        dp: user.dp || "",
+        isFollowing: false,
         mutualCount: mutualFollowers.length,
         mutualNames,
         reason:
@@ -104,26 +100,6 @@ export const getSuggestions = async (req, res) => {
             : "Suggested for you",
       };
     });
-
-    // If no users, fallback to random users (like Instagram)
-    if (suggestions.length === 0) {
-      users = await User.find({ _id: { $ne: currentUserId } })
-        .select("username dp")
-        .limit(5);
-
-      users.forEach((user) =>
-        suggestions.push({
-          _id: user._id,
-          username: user.username,
-          dp: user.dp || "",
-
-          isFollowing: false,
-          mutualCount: 0,
-          mutualNames: [],
-          reason: "Suggested for you",
-        }),
-      );
-    }
 
     res.json(suggestions);
   } catch (err) {

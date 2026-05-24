@@ -28,14 +28,9 @@ export default function Suggestions() {
   }, []);
 
   // Update local isFollowing state
-const handleFollowChange = ({ userId, isFollowing }) => {
+const handleFollowChange = ({ userId, status }) => {
   setSuggestions((prev) =>
-    prev
-      .map((u) =>
-        u._id === userId ? { ...u, isFollowing } : u
-      )
-      // 🚀 remove user after follow
-      .filter((u) => !(u._id === userId && isFollowing))
+    prev.filter((u) => !(u._id === userId && status === "following"))
   );
 };
 
