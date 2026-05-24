@@ -115,7 +115,7 @@ export const getSuggestions = async (req, res) => {
         suggestions.push({
           _id: user._id,
           username: user.username,
-          dp: user.dp ? `http://localhost:5000/${user.dp}` : "/default-dp.png",
+          dp: user.dp || "",
 
           isFollowing: false,
           mutualCount: 0,
