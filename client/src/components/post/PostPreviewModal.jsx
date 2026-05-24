@@ -88,8 +88,21 @@ export default function PostPreviewModal({ post, onClose }) {
     }
   };
 
-  const cleanPath = post.file?.startsWith("/") ? post.file : `/${post.file}`;
-  const isVideo = post.type === "video" || /\.(mp4|webm|mov)$/i.test(cleanPath);
+  const getMediaUrl = (file) => {
+    if (!file) return "";
+
+    if (file.startsWith("http")) {
+      return file;
+    }
+
+    return `${API_URL}/${file.replace(/^\/+/, "")}`;
+  };
+
+  const mediaUrl = getMediaUrl(post.file);
+  const isVideo =
+    post.type === "video" ||
+    post.type === "reel" ||
+    /\.(mp4|webm|mov|mkv)$/i.test(post.file || "");
   const handleDoubleClick = async () => {
     if (!liked) {
       await toggleLike();
@@ -127,10 +140,10 @@ export default function PostPreviewModal({ post, onClose }) {
             onDoubleClick={handleDoubleClick}
           >
             {isVideo ? (
-              <VideoPlayer src={`${API_URL}${cleanPath}`} />
+              <VideoPlayer src={mediaUrl} />
             ) : (
               <img
-                src={`${API_URL}${cleanPath}`}
+                src={mediaUrl}
                 alt="post"
                 className="w-100 h-100"
                 style={{ objectFit: "cover" }}
@@ -147,7 +160,7 @@ export default function PostPreviewModal({ post, onClose }) {
           <div className="p-3 border-bottom d-flex align-items-center gap-2">
             <img
               src={
-                post?.user?.dp ? `${API_URL}/${post.user.dp}` : "/avatar.png"
+                post?.user?.dp ? getMediaUrl(post.user.dp) : "/default-dp.png"
               }
               className="rounded-circle"
               width="35"
