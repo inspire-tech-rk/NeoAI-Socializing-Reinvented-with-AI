@@ -7,21 +7,20 @@ export const trackView = async (req, res) => {
   try {
     const { contentId, watchTime = 0 } = req.body;
 
-    if (!contentId) {
-      return res.json({ success: true });
-    }
+    if (!contentId) return res.json({ success: true });
+
+    // fast scroll should not affect recommendation
+    if (watchTime < 3) return res.json({ success: true });
 
     let type = "view";
     if (watchTime >= 8) type = "watch";
-
-    const repeatViews = watchTime >= 20 ? 1 : 0;
 
     await Interaction.create({
       user: req.user._id,
       content: contentId,
       type,
       watchTime,
-      repeatViews,
+      repeatViews: watchTime >= 20 ? 1 : 0,
     });
 
     await Content.findByIdAndUpdate(contentId, {
@@ -38,7 +37,7 @@ export const trackView = async (req, res) => {
   }
 };
 
-/* ---------------- SMART RECOMMENDATIONS ---------------- */
+/* ---------------- WEIGHT-BASED RECOMMENDATIONS ---------------- */
 export const getRecommendations = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -47,24 +46,40 @@ export const getRecommendations = async (req, res) => {
       .populate("content")
       .sort({ createdAt: -1 });
 
+    const exactContentScore = {};
     const categoryScore = {};
 
-    interactions.forEach((interaction) => {
+    interactions.forEach((interaction, index) => {
+      const contentId = interaction.content?._id?.toString();
       const categories = interaction.content?.categories || [];
+
+      if (!contentId) return;
 
       let weight = 0;
 
-      if (interaction.type === "view") weight += 2;
-      if (interaction.type === "watch") weight += 8;
-      if (interaction.type === "like") weight += 15;
-      if (interaction.type === "comment") weight += 20;
+      // operation weights
+      if (interaction.type === "view") weight += 3;
+      if (interaction.type === "watch") weight += 10;
+      if (interaction.type === "like") weight += 40;
+      if (interaction.type === "comment") weight += 50;
 
-      if (interaction.watchTime >= 10) weight += 5;
-      if (interaction.watchTime >= 20) weight += 10;
-      if (interaction.watchTime >= 30) weight += 15;
+      // watch time weights
+      if (interaction.watchTime >= 8) weight += 8;
+      if (interaction.watchTime >= 15) weight += 15;
+      if (interaction.watchTime >= 25) weight += 25;
 
-      if (interaction.repeatViews > 0) weight += 18;
+      // rewatch weight
+      if (interaction.repeatViews > 0) weight += 35;
 
+      // latest interaction should be strongest
+      const recencyBoost = Math.max(1, 30 - index * 2);
+      weight += recencyBoost;
+
+      // exact interacted video boost
+      exactContentScore[contentId] =
+        (exactContentScore[contentId] || 0) + weight * 2;
+
+      // same category/caption boost
       categories.forEach((cat) => {
         const key = String(cat).toLowerCase().trim();
         categoryScore[key] = (categoryScore[key] || 0) + weight;
@@ -77,25 +92,33 @@ export const getRecommendations = async (req, res) => {
       .populate("reel")
       .populate("content");
 
-    const hasHistory = Object.keys(categoryScore).length > 0;
-
     posts = posts.sort((a, b) => {
-      if (!hasHistory) {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      }
+      const aContentId = a.content?._id?.toString();
+      const bContentId = b.content?._id?.toString();
 
       const aCategories = a.content?.categories || [];
       const bCategories = b.content?.categories || [];
 
-      const aScore = aCategories.reduce((sum, cat) => {
-        return sum + (categoryScore[String(cat).toLowerCase().trim()] || 0);
-      }, 0);
+      const aExact = exactContentScore[aContentId] || 0;
+      const bExact = exactContentScore[bContentId] || 0;
 
-      const bScore = bCategories.reduce((sum, cat) => {
-        return sum + (categoryScore[String(cat).toLowerCase().trim()] || 0);
-      }, 0);
+      const aCategory = aCategories.reduce(
+        (sum, cat) =>
+          sum + (categoryScore[String(cat).toLowerCase().trim()] || 0),
+        0
+      );
 
-      if (aScore !== bScore) return bScore - aScore;
+      const bCategory = bCategories.reduce(
+        (sum, cat) =>
+          sum + (categoryScore[String(cat).toLowerCase().trim()] || 0),
+        0
+      );
+
+      // final score
+      const aFinal = aExact + aCategory;
+      const bFinal = bExact + bCategory;
+
+      if (aFinal !== bFinal) return bFinal - aFinal;
 
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
