@@ -4,7 +4,6 @@ import { API_URL } from "../config";
 
 export default function NexAI() {
   const [query, setQuery] = useState("");
-  const [image, setImage] = useState(null);
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -100,7 +99,10 @@ export default function NexAI() {
       { withCredentials: true }
     );
 
-    setChats((prev) => prev.map((c) => (c._id === chatId ? res.data : c)));
+    setChats((prev) =>
+      prev.map((c) => (c._id === chatId ? res.data : c))
+    );
+
     setOpenMenuId(null);
   };
 
@@ -151,7 +153,7 @@ export default function NexAI() {
   const handleSearch = async (e) => {
     e.preventDefault();
 
-    if (!query.trim() && !image) return;
+    if (!query.trim()) return;
 
     let chatId = activeChatId;
 
@@ -179,22 +181,16 @@ export default function NexAI() {
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("question", query);
-      formData.append("history", JSON.stringify(messages));
-      formData.append("userId", userId);
-      formData.append("chatId", chatId);
-
-      if (image) {
-        formData.append("image", image);
-      }
-
-      const res = await axios.post(`${API_URL}/api/nexai/ask`, formData, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const res = await axios.post(
+        `${API_URL}/api/nexai/ask`,
+        {
+          question: query,
+          history: messages,
+          userId,
+          chatId,
         },
-      });
+        { withCredentials: true }
+      );
 
       const aiMessage = {
         role: "assistant",
@@ -212,7 +208,6 @@ export default function NexAI() {
       });
 
       setActiveChatId(res.data.chat._id);
-      setImage(null);
     } catch (err) {
       const serverMessage =
         err.response?.data?.message || "⚠️ AI service unavailable.";
@@ -225,8 +220,6 @@ export default function NexAI() {
           type: "error",
         },
       ]);
-
-      setImage(null);
     }
 
     setLoading(false);
@@ -399,24 +392,6 @@ export default function NexAI() {
           style={{ background: "#000" }}
         >
           <input
-            type="file"
-            accept="image/*"
-            id="nexai-image"
-            style={{ display: "none" }}
-            onChange={(e) => setImage(e.target.files[0])}
-          />
-
-          <label htmlFor="nexai-image" className="btn btn-outline-light">
-            🖼️
-          </label>
-
-          {image && (
-            <span className="text-info small d-flex align-items-center">
-              {image.name}
-            </span>
-          )}
-
-          <input
             type="text"
             className="form-control bg-dark text-white border-secondary"
             placeholder="Ask NexAI anything..."
@@ -424,11 +399,7 @@ export default function NexAI() {
             onChange={(e) => setQuery(e.target.value)}
           />
 
-          <button
-            type="submit"
-            className="btn btn-primary px-4"
-            disabled={loading}
-          >
+          <button type="submit" className="btn btn-primary px-4" disabled={loading}>
             {loading ? "..." : "Ask"}
           </button>
         </form>
