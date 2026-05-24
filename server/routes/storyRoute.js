@@ -7,6 +7,8 @@ import {
   getFeedStories,
   hasStory,
   deleteStory,
+  toggleStoryLike,
+  commentOnStory,
 } from "../controllers/storyController.js";
 
 const router = express.Router();
@@ -19,6 +21,9 @@ router.get("/feed", protect, getFeedStories);
 
 // ✅ Check if user has story
 router.get("/has/:userId", hasStory);
+
+router.post("/:id/like", protect, toggleStoryLike);
+router.post("/:id/comment", protect, commentOnStory);
 
 // ✅ Get stories of specific user
 router.get("/:userId", getStoriesByUser);

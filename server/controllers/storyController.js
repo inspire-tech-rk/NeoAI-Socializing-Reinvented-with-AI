@@ -1,5 +1,6 @@
 import Story from "../models/Story.js";
 import mongoose from "mongoose";
+import Notification from "../models/Notification.js";
 
 // Upload
 export const uploadStory = async (req, res) => {
@@ -20,19 +21,18 @@ export const getFeedStories = async (req, res) => {
     const stories = await Story.aggregate([
       { $match: { expiresAt: { $gt: new Date() } } },
       {
-       $group: {
-  _id: "$user",
-  stories: {
-    $push: {
-      _id: "$_id",
-      file: "$file",
-      type: "$type",
-      createdAt: "$createdAt",
-      user: "$user"
-    }
-  }
-},
-
+        $group: {
+          _id: "$user",
+          stories: {
+            $push: {
+              _id: "$_id",
+              file: "$file",
+              type: "$type",
+              createdAt: "$createdAt",
+              user: "$user",
+            },
+          },
+        },
       },
       {
         $lookup: {
@@ -96,4 +96,79 @@ export const deleteStory = async (req, res) => {
   }
 };
 
+export const toggleStoryLike = async (req, res) => {
+  try {
+    const story = await Story.findById(req.params.id);
 
+    if (!story) return res.status(404).json({ message: "Story not found" });
+
+    const userId = req.user._id;
+    const alreadyLiked = story.likes.some(
+      (id) => id.toString() === userId.toString(),
+    );
+
+    if (alreadyLiked) {
+      story.likes.pull(userId);
+    } else {
+      story.likes.addToSet(userId);
+
+      if (story.user.toString() !== userId.toString()) {
+        await Notification.create({
+          recipient: story.user,
+          sender: userId,
+          type: "story_like",
+          story: story._id,
+        });
+      }
+    }
+
+    await story.save();
+
+    res.json({
+      liked: !alreadyLiked,
+      likesCount: story.likes.length,
+    });
+  } catch (err) {
+    console.error("Story like error:", err);
+    res.status(500).json({ message: "Story like failed" });
+  }
+};
+
+export const commentOnStory = async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: "Comment required" });
+    }
+
+    const story = await Story.findById(req.params.id);
+
+    if (!story) return res.status(404).json({ message: "Story not found" });
+
+    story.comments.push({
+      user: req.user._id,
+      text,
+    });
+
+    await story.save();
+
+    if (story.user.toString() !== req.user._id.toString()) {
+      await Notification.create({
+        recipient: story.user,
+        sender: req.user._id,
+        type: "story_comment",
+        story: story._id,
+        commentText: text,
+      });
+    }
+
+    res.json({
+      success: true,
+      comments: story.comments,
+    });
+  } catch (err) {
+    console.error("Story comment error:", err);
+    res.status(500).json({ message: "Story comment failed" });
+  }
+};

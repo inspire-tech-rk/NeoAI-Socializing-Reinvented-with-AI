@@ -19,12 +19,31 @@ export default function StoryViewer({
   const [isPlaying, setIsPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [commentText, setCommentText] = useState("");
+  const [liked, setLiked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const { user: loggedInUser } = useContext(AuthContext);
   const videoRef = useRef(null);
   const intervalRef = useRef(null);
   const navigate = useNavigate();
+
+  const story = stories[index];
+
+  const nextStory = () => {
+    setMenuOpen(false);
+    setCommentText("");
+
+    if (index < stories.length - 1) setIndex(index + 1);
+    else onClose();
+  };
+
+  const prevStory = () => {
+    setMenuOpen(false);
+    setCommentText("");
+
+    if (index > 0) setIndex(index - 1);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -48,24 +67,18 @@ export default function StoryViewer({
     setStories(initialStories);
     setIndex(0);
     setMenuOpen(false);
+    setCommentText("");
   }, [initialStories]);
 
-  if (!Array.isArray(stories) || stories.length === 0) return null;
+  useEffect(() => {
+    if (!story || !loggedInUser?._id) return;
 
-  const story = stories[index];
+    const alreadyLiked = story.likes?.some(
+      (id) => id?.toString() === loggedInUser._id.toString()
+    );
 
-  const nextStory = () => {
-    setMenuOpen(false);
-
-    if (index < stories.length - 1) setIndex(index + 1);
-    else onClose();
-  };
-
-  const prevStory = () => {
-    setMenuOpen(false);
-
-    if (index > 0) setIndex(index - 1);
-  };
+    setLiked(!!alreadyLiked);
+  }, [story, loggedInUser]);
 
   useEffect(() => {
     if (!story) return;
@@ -113,6 +126,8 @@ export default function StoryViewer({
     return () => clearInterval(intervalRef.current);
   }, [index, story, muted]);
 
+  if (!Array.isArray(stories) || stories.length === 0) return null;
+
   const handleDelete = async (storyId) => {
     if (!onDeleteStory) return;
 
@@ -154,6 +169,61 @@ export default function StoryViewer({
     } catch (err) {
       console.error("Add to highlight failed", err);
       alert("Failed to add story to highlight");
+    }
+  };
+
+  const handleStoryLike = async (e) => {
+    e.stopPropagation();
+
+    try {
+      const res = await fetch(`${API_URL}/api/stories/${story._id}/like`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      setLiked(data.liked);
+
+      setStories((prev) =>
+        prev.map((s) =>
+          s._id === story._id
+            ? {
+                ...s,
+                likes: data.liked
+                  ? [...(s.likes || []), loggedInUser._id]
+                  : (s.likes || []).filter(
+                      (id) => id.toString() !== loggedInUser._id.toString()
+                    ),
+              }
+            : s
+        )
+      );
+    } catch (err) {
+      console.error("Story like failed", err);
+    }
+  };
+
+  const sendStoryComment = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!commentText.trim()) return;
+
+    try {
+      await fetch(`${API_URL}/api/stories/${story._id}/comment`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: commentText }),
+      });
+
+      setCommentText("");
+      alert("Comment sent");
+    } catch (err) {
+      console.error("Story comment failed", err);
     }
   };
 
@@ -391,6 +461,52 @@ export default function StoryViewer({
               </div>
             )}
           </div>
+
+          <form
+            onSubmit={sendStoryComment}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              bottom: 18,
+              left: 14,
+              right: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              zIndex: 20,
+            }}
+          >
+            <input
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder={`Reply to ${loggedInUser?.username || "user"}...`}
+              style={{
+                flex: 1,
+                height: 42,
+                borderRadius: 24,
+                border: "1px solid rgba(255,255,255,0.7)",
+                background: "rgba(0,0,0,0.25)",
+                color: "#fff",
+                padding: "0 16px",
+                outline: "none",
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={handleStoryLike}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: liked ? "#ff2d75" : "#fff",
+                fontSize: 30,
+                cursor: "pointer",
+              }}
+            >
+              {liked ? "♥" : "♡"}
+            </button>
+          </form>
         </div>
       </div>
     </div>
