@@ -3,15 +3,19 @@ import axios from "axios";
 import { API_URL } from "../../config";
 import { AuthContext } from "../../context/AuthContext";
 
+const getMediaUrl = (file) => {
+  if (!file) return "/default-dp.png";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
+
 export default function CommentItem({ comment, onDeleted, onUpdated }) {
   const { user } = useContext(AuthContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(comment.text);
 
-  const dp = comment.user?.dp
-    ? `${API_URL}/${comment.user.dp.replace(/\\/g, "/")}`
-    : "/default-dp.png";
+  const dp = getMediaUrl(comment.user?.dp);
 
   const isOwner = user?._id === comment.user?._id;
 
@@ -27,7 +31,7 @@ export default function CommentItem({ comment, onDeleted, onUpdated }) {
     const res = await axios.put(
       `${API_URL}/api/comments/${comment._id}`,
       { text },
-      { withCredentials: true },
+      { withCredentials: true }
     );
 
     onUpdated(res.data);
@@ -38,8 +42,14 @@ export default function CommentItem({ comment, onDeleted, onUpdated }) {
     <div className="d-flex gap-2 mb-3 position-relative">
       <img
         src={dp}
+        onError={(e) => (e.target.src = "/default-dp.png")}
         alt=""
-        style={{ width: 34, height: 34, borderRadius: "50%" }}
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          objectFit: "cover",
+        }}
       />
 
       <div style={{ flex: 1 }}>
@@ -84,6 +94,7 @@ export default function CommentItem({ comment, onDeleted, onUpdated }) {
               >
                 Edit
               </div>
+
               <div
                 className="text-danger cursor-pointer"
                 onClick={handleDelete}
