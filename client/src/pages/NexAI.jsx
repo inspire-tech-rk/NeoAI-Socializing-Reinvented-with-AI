@@ -8,6 +8,7 @@ export default function NexAI() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   const chatContainerRef = useRef(null);
   const bottomRef = useRef(null);
@@ -28,7 +29,7 @@ export default function NexAI() {
       withCredentials: true,
     });
 
-    setChats(res.data);
+    setChats(res.data.sort((a, b) => b.pinned - a.pinned));
 
     if (res.data.length > 0 && !activeChatId) {
       setActiveChatId(res.data[0]._id);
@@ -63,6 +64,7 @@ export default function NexAI() {
 
     setActiveChatId(chatId);
     setMessages(res.data.messages || []);
+    setOpenMenuId(null);
   };
 
   const deleteChat = async (chatId, e) => {
@@ -74,6 +76,7 @@ export default function NexAI() {
 
     const remaining = chats.filter((c) => c._id !== chatId);
     setChats(remaining);
+    setOpenMenuId(null);
 
     if (activeChatId === chatId) {
       if (remaining.length > 0) {
@@ -84,6 +87,55 @@ export default function NexAI() {
         setMessages([]);
       }
     }
+  };
+
+  const renameChat = async (chatId) => {
+    const title = prompt("Enter new chat name:");
+    if (!title?.trim()) return;
+
+    const res = await axios.put(
+      `${API_URL}/api/nexai/chat/${chatId}/rename`,
+      { title },
+      { withCredentials: true }
+    );
+
+    setChats((prev) =>
+      prev.map((c) => (c._id === chatId ? res.data : c))
+    );
+
+    setOpenMenuId(null);
+  };
+
+  const pinChat = async (chatId) => {
+    const res = await axios.put(
+      `${API_URL}/api/nexai/chat/${chatId}/pin`,
+      {},
+      { withCredentials: true }
+    );
+
+    setChats((prev) =>
+      prev
+        .map((c) => (c._id === chatId ? res.data : c))
+        .sort((a, b) => b.pinned - a.pinned)
+    );
+
+    setOpenMenuId(null);
+  };
+
+  const shareChat = async (chat) => {
+    const url = `${window.location.origin}/nexai?chat=${chat._id}`;
+
+    if (navigator.share) {
+      await navigator.share({
+        title: chat.title,
+        url,
+      });
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("Chat link copied");
+    }
+
+    setOpenMenuId(null);
   };
 
   const clearAllChats = async () => {
@@ -150,7 +202,9 @@ export default function NexAI() {
 
       setChats((prev) => {
         const filtered = prev.filter((c) => c._id !== res.data.chat._id);
-        return [res.data.chat, ...filtered];
+        return [res.data.chat, ...filtered].sort(
+          (a, b) => b.pinned - a.pinned
+        );
       });
 
       setActiveChatId(res.data.chat._id);
@@ -186,20 +240,14 @@ export default function NexAI() {
           overflowY: "auto",
         }}
       >
-        <button
-          className="btn btn-primary w-100 mb-3"
-          onClick={createNewChat}
-        >
+        <button className="btn btn-primary w-100 mb-3" onClick={createNewChat}>
           + New Chat
         </button>
 
         <div className="d-flex justify-content-between align-items-center mb-2">
           <strong>Recent Chats</strong>
           {chats.length > 0 && (
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={clearAllChats}
-            >
+            <button className="btn btn-sm btn-danger" onClick={clearAllChats}>
               Clear
             </button>
           )}
@@ -213,13 +261,12 @@ export default function NexAI() {
           <div
             key={chat._id}
             onClick={() => openChat(chat._id)}
-            className="d-flex justify-content-between align-items-center"
+            className="d-flex justify-content-between align-items-center position-relative"
             style={{
               padding: "10px",
               borderRadius: "8px",
               cursor: "pointer",
-              background:
-                activeChatId === chat._id ? "#1c1c1c" : "transparent",
+              background: activeChatId === chat._id ? "#1c1c1c" : "transparent",
               marginBottom: "6px",
             }}
           >
@@ -229,22 +276,58 @@ export default function NexAI() {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                maxWidth: "200px",
+                maxWidth: "190px",
               }}
             >
+              {chat.pinned && "📌 "}
               {chat.title || "New Chat"}
             </span>
 
             <span
-              onClick={(e) => deleteChat(chat._id, e)}
-              style={{
-                color: "#aaa",
-                cursor: "pointer",
-                fontSize: "14px",
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenMenuId(openMenuId === chat._id ? null : chat._id);
               }}
+              style={{ cursor: "pointer", padding: "0 6px" }}
             >
-              ✕
+              ⋮
             </span>
+
+            {openMenuId === chat._id && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "absolute",
+                  right: "5px",
+                  top: "36px",
+                  background: "#222",
+                  border: "1px solid #444",
+                  borderRadius: "8px",
+                  padding: "6px 0",
+                  width: "130px",
+                  zIndex: 999,
+                }}
+              >
+                <div style={menuItem} onClick={() => renameChat(chat._id)}>
+                  Rename
+                </div>
+
+                <div style={menuItem} onClick={() => pinChat(chat._id)}>
+                  {chat.pinned ? "Unpin Chat" : "Pin Chat"}
+                </div>
+
+                <div style={menuItem} onClick={() => shareChat(chat)}>
+                  Share Chat
+                </div>
+
+                <div
+                  style={{ ...menuItem, color: "#ff4d4f" }}
+                  onClick={(e) => deleteChat(chat._id, e)}
+                >
+                  Delete
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -316,11 +399,7 @@ export default function NexAI() {
             onChange={(e) => setQuery(e.target.value)}
           />
 
-          <button
-            type="submit"
-            className="btn btn-primary px-4"
-            disabled={loading}
-          >
+          <button type="submit" className="btn btn-primary px-4" disabled={loading}>
             {loading ? "..." : "Ask"}
           </button>
         </form>
@@ -328,3 +407,10 @@ export default function NexAI() {
     </div>
   );
 }
+
+const menuItem = {
+  padding: "8px 12px",
+  fontSize: "14px",
+  cursor: "pointer",
+  color: "#fff",
+};

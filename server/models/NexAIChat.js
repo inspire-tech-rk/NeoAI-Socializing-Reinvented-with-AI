@@ -6,7 +6,7 @@ const messageSchema = new mongoose.Schema(
     content: String,
     type: String,
   },
-  { _id: false }
+  { _id: false },
 );
 
 const nexAIChatSchema = new mongoose.Schema(
@@ -22,11 +22,16 @@ const nexAIChatSchema = new mongoose.Schema(
       default: "New Chat",
     },
 
+    pinned: {
+      type: Boolean,
+      default: false,
+    },
+
     messages: [messageSchema],
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model("NexAIChat", nexAIChatSchema);

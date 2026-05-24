@@ -42,7 +42,7 @@ export const getNexAIChats = async (req, res) => {
 
     const chats = await NexAIChat.find({ userId })
       .select("title createdAt updatedAt messages")
-      .sort({ updatedAt: -1 });
+      .sort({ pinned: -1, updatedAt: -1 });
 
     res.json(chats);
   } catch (err) {
@@ -137,7 +137,7 @@ export const askNexAI = async (req, res) => {
     if (cached) {
       chat.messages.push(
         { role: "user", content: question },
-        { role: "assistant", content: cached, type: "normal" }
+        { role: "assistant", content: cached, type: "normal" },
       );
 
       await chat.save();
@@ -161,10 +161,12 @@ export const askNexAI = async (req, res) => {
           headers: {
             Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": process.env.FRONTEND_URL || "https://neo-ai-socializing-reinvented-with.vercel.app",
+            "HTTP-Referer":
+              process.env.FRONTEND_URL ||
+              "https://neo-ai-socializing-reinvented-with.vercel.app",
             "X-Title": "NexAI",
           },
-        }
+        },
       );
 
       text = response.data.choices[0].message.content;
@@ -186,7 +188,7 @@ export const askNexAI = async (req, res) => {
               Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         text = response.data.choices[0].message.content;
@@ -223,7 +225,7 @@ export const askNexAI = async (req, res) => {
 
     chat.messages.push(
       { role: "user", content: question },
-      { role: "assistant", content: text, type: "normal" }
+      { role: "assistant", content: text, type: "normal" },
     );
 
     await chat.save();
@@ -235,5 +237,36 @@ export const askNexAI = async (req, res) => {
   } catch (err) {
     console.error("NexAI controller error:", err);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const renameNexAIChat = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { title } = req.body;
+
+    const chat = await NexAIChat.findByIdAndUpdate(
+      chatId,
+      { title },
+      { new: true },
+    );
+
+    res.json(chat);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to rename chat" });
+  }
+};
+
+export const togglePinNexAIChat = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    const chat = await NexAIChat.findById(chatId);
+    chat.pinned = !chat.pinned;
+    await chat.save();
+
+    res.json(chat);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to pin chat" });
   }
 };
