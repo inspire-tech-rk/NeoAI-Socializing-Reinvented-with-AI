@@ -13,7 +13,13 @@ export default function ReelActions({ post, onComment }) {
 
   useEffect(() => {
     if (post?.likes && currentUser?._id) {
-      setLiked(post.likes.includes(currentUser._id));
+      setLiked(
+        post.likes.some((like) =>
+          typeof like === "object"
+            ? like._id?.toString() === currentUser._id.toString()
+            : like?.toString() === currentUser._id.toString()
+        )
+      );
       setLikeCount(post.likes.length);
     }
   }, [post, currentUser]);
@@ -21,7 +27,7 @@ export default function ReelActions({ post, onComment }) {
   const toggleLike = async () => {
     try {
       const res = await axios.post(
-        `${API_URL}/api/posts/${post._id}/like`, // ✅ ALWAYS POST
+        `${API_URL}/api/posts/${post._id}/like`,
         {},
         { withCredentials: true }
       );
@@ -29,7 +35,6 @@ export default function ReelActions({ post, onComment }) {
       setLiked(res.data.liked);
       setLikeCount(res.data.likesCount);
 
-      // 🔥 GLOBAL UPDATE EVENT
       window.dispatchEvent(
         new CustomEvent("post-like-updated", {
           detail: {
@@ -39,6 +44,8 @@ export default function ReelActions({ post, onComment }) {
         })
       );
 
+      // 🔥 refresh ML recommendations after like
+      window.dispatchEvent(new Event("reel-interaction-updated"));
     } catch (err) {
       console.error("Like failed", err);
     }
@@ -61,7 +68,6 @@ export default function ReelActions({ post, onComment }) {
         className="position-absolute d-flex flex-column align-items-center"
         style={{ right: 12, bottom: 100, gap: 18, color: "#fff", fontSize: 22 }}
       >
-        {/* ❤️ LIKE */}
         <span
           onClick={toggleLike}
           style={{
@@ -85,12 +91,10 @@ export default function ReelActions({ post, onComment }) {
           </span>
         </span>
 
-        {/* 💬 */}
         <span onClick={onComment} style={{ cursor: "pointer" }}>
           💬
         </span>
 
-        {/* 📤 */}
         <span onClick={shareReel} style={{ cursor: "pointer" }}>
           📤
         </span>

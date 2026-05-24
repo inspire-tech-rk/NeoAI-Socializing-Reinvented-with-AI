@@ -1,119 +1,117 @@
 import Interaction from "../models/Interaction.js";
 import Post from "../models/Post.js";
-import Content from "../models/Content.js"; // ✅ NEW
-import axios from "axios";
+import Content from "../models/Content.js";
 
-/* ---------------- TRACK VIEW ---------------- */
+/* ---------------- TRACK VIEW / WATCH / REWATCH ---------------- */
 export const trackView = async (req, res) => {
   try {
-    const { postId, contentId, watchTime, scrollDepth } = req.body;
+    const { contentId, watchTime = 0 } = req.body;
 
-    // ✅ SUPPORT BOTH OLD + NEW SYSTEM
-    const targetContentId = contentId || postId;
+    if (!contentId) {
+      return res.json({ success: true });
+    }
+
+    let type = "view";
+    if (watchTime >= 8) type = "watch";
+
+    const repeatViews = watchTime >= 20 ? 1 : 0;
 
     await Interaction.create({
       user: req.user._id,
-      content: targetContentId, // ✅ USE CONTENT
-      type: watchTime > 5 ? "watch" : "view",
-      watchTime: watchTime || 0,
-      repeatViews: watchTime > 20 ? 1 : 0,
-      scrollDepth: scrollDepth || 0,
+      content: contentId,
+      type,
+      watchTime,
+      repeatViews,
     });
 
-    // 🔥 UPDATE CONTENT STATS (if exists)
-    if (contentId) {
-      await Content.findByIdAndUpdate(contentId, {
-        $inc: {
-          views: 1,
-          watchTime: watchTime || 0,
-        },
-      });
-    }
+    await Content.findByIdAndUpdate(contentId, {
+      $inc: {
+        views: 1,
+        watchTime,
+      },
+    });
 
     res.json({ success: true });
   } catch (err) {
+    console.error("Track view error:", err);
     res.status(500).json({ message: "Tracking failed" });
   }
 };
 
-/* ---------------- GET RECOMMENDATIONS ---------------- */
-/* ---------------- GET RECOMMENDATIONS ---------------- */
+/* ---------------- SMART RECOMMENDATIONS ---------------- */
 export const getRecommendations = async (req, res) => {
   try {
-    const userId = req.user._id.toString();
+    const userId = req.user._id;
 
-    /* ---------------- FETCH INTERACTIONS ---------------- */
-    const interactionsRaw = await Interaction.find().lean();
+    const interactions = await Interaction.find({ user: userId })
+      .populate("content")
+      .sort({ createdAt: -1 });
 
-    const interactions = interactionsRaw.map((i) => ({
-      user: i.user?.toString(),
-      content: i.content?.toString(), // ✅ correct
-      type: i.type,
-      watchTime: i.watchTime || 0,
-      repeatViews: i.repeatViews || 0,
-      createdAt: i.createdAt,
-    }));
+    const categoryScore = {};
 
-    /* ---------------- FETCH CONTENTS ---------------- */
-    const contentsRaw = await Content.find().lean();
+    interactions.forEach((interaction) => {
+      const categories = interaction.content?.categories || [];
 
-    const contents = contentsRaw.map((c) => ({
-      _id: c._id.toString(),   // 🔥🔥🔥 FIXED (MOST IMPORTANT)
-      type: c.type,
-      embedding: c.embedding || [],
-      categories: c.categories || [],
-      music: c.music || "",
-      views: c.views || 0,
-      watchTime: c.watchTime || 0,
-      likes: c.likes || [],
-      createdAt: c.createdAt,
-    }));
+      let weight = 0;
 
-    /* ---------------- CALL PYTHON ---------------- */
-    const response = await axios.post("http://127.0.0.1:8000/recommend", {
-      userId,
-      interactions,
-      contents,
+      if (interaction.type === "view") weight += 2;
+      if (interaction.type === "watch") weight += 8;
+      if (interaction.type === "like") weight += 15;
+      if (interaction.type === "comment") weight += 20;
+
+      if (interaction.watchTime >= 10) weight += 5;
+      if (interaction.watchTime >= 20) weight += 10;
+      if (interaction.watchTime >= 30) weight += 15;
+
+      if (interaction.repeatViews > 0) weight += 18;
+
+      categories.forEach((cat) => {
+        const key = String(cat).toLowerCase().trim();
+        categoryScore[key] = (categoryScore[key] || 0) + weight;
+      });
     });
 
-    const orderedContentIds = response.data.recommended;
-
-    /* ---------------- FALLBACK ---------------- */
-    if (!orderedContentIds || orderedContentIds.length === 0) {
-      const fallbackPosts = await Post.find()
-        .sort({ createdAt: -1 })
-        .limit(20)
-        .populate("user", "username dp");
-
-      return res.json(fallbackPosts);
-    }
-
-    /* ---------------- MAP CONTENT → POSTS ---------------- */
-    const posts = await Post.find({
-      content: { $in: orderedContentIds },
-    })
+    let posts = await Post.find({ type: "video" })
       .populate("user", "username dp")
+      .populate("likes", "_id username dp")
+      .populate("reel")
       .populate("content");
 
-    /* ---------------- KEEP ORDER ---------------- */
-    const orderedPosts = orderedContentIds
-      .map((cid) =>
-        posts.find((p) => p.content?._id.toString() === cid)
-      )
-      .filter(Boolean);
+    const hasHistory = Object.keys(categoryScore).length > 0;
 
-    res.json(orderedPosts);
+    posts = posts.sort((a, b) => {
+      if (!hasHistory) {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
 
+      const aCategories = a.content?.categories || [];
+      const bCategories = b.content?.categories || [];
+
+      const aScore = aCategories.reduce((sum, cat) => {
+        return sum + (categoryScore[String(cat).toLowerCase().trim()] || 0);
+      }, 0);
+
+      const bScore = bCategories.reduce((sum, cat) => {
+        return sum + (categoryScore[String(cat).toLowerCase().trim()] || 0);
+      }, 0);
+
+      if (aScore !== bScore) return bScore - aScore;
+
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    res.json(posts);
   } catch (err) {
-    console.error("🔥 RECOMMENDATION ERROR:", err.message);
+    console.error("Recommendation error:", err);
 
-    /* ---------------- SAFE FALLBACK ---------------- */
-    const fallbackPosts = await Post.find()
+    const fallbackPosts = await Post.find({ type: "video" })
       .sort({ createdAt: -1 })
       .limit(20)
-      .populate("user", "username dp");
+      .populate("user", "username dp")
+      .populate("likes", "_id username dp")
+      .populate("reel")
+      .populate("content");
 
     res.json(fallbackPosts);
   }
 };
-

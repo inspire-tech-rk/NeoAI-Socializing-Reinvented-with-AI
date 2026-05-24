@@ -1,28 +1,32 @@
 import { useEffect, useState } from "react";
 import ReelCard from "./ReelCard";
 import { API_URL } from "../../config";
-import axios from "axios"; // ✅ ADD
+import axios from "axios";
 import "./reel.css";
 
 export default function ReelFeed() {
   const [reels, setReels] = useState([]);
 
+  const fetchReels = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/recommendations`, {
+        withCredentials: true,
+      });
+
+      setReels(res.data);
+    } catch (err) {
+      console.error("Failed to load reels:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchReels = async () => {
-      try {
-        // ✅ CALL RECOMMENDATION API (IMPORTANT)
-        const res = await axios.get(
-          `${API_URL}/api/recommendations`,
-          { withCredentials: true } // ✅ IMPORTANT FOR AUTH
-        );
-
-        setReels(res.data);
-      } catch (err) {
-        console.error("Failed to load reels:", err);
-      }
-    };
-
     fetchReels();
+
+    window.addEventListener("reel-interaction-updated", fetchReels);
+
+    return () => {
+      window.removeEventListener("reel-interaction-updated", fetchReels);
+    };
   }, []);
 
   return (

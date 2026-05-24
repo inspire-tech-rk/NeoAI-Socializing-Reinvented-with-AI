@@ -3,9 +3,14 @@ import { useState } from "react";
 export default function CommentInput({ onSend }) {
   const [text, setText] = useState("");
 
-  const send = () => {
+  const send = async () => {
     if (!text.trim()) return;
-    onSend(text);
+
+    await onSend(text);
+
+    // 🔥 refresh ML recommendations after comment
+    window.dispatchEvent(new Event("reel-interaction-updated"));
+
     setText("");
   };
 
