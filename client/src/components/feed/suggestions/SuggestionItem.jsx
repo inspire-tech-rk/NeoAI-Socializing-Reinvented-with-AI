@@ -1,4 +1,11 @@
+import { API_URL } from "../../../config";
 import FollowButton from "./FollowButton";
+
+const getMediaUrl = (file) => {
+  if (!file) return "/default-dp.png";
+  if (file.startsWith("http")) return file;
+  return `${API_URL}/${file.replace(/^\/+/, "")}`;
+};
 
 export default function SuggestionItem({ suggestedUser, onFollowChange }) {
   const { username, dp, isFollowing, mutualCount, mutualNames, reason, _id } =
@@ -11,16 +18,18 @@ export default function SuggestionItem({ suggestedUser, onFollowChange }) {
     >
       <div className="d-flex align-items-center gap-2">
         <img
-          src={dp?.startsWith("http") ? dp : `http://localhost:5000/${dp}`}
+          src={getMediaUrl(dp)}
           onError={(e) => (e.target.src = "/default-dp.png")}
           alt={username}
           className="rounded-circle"
           width={40}
           height={40}
-          style={{ border: "1px solid #dbdbdb" }}
+          style={{ border: "1px solid #dbdbdb", objectFit: "cover" }}
         />
+
         <div className="d-flex flex-column">
           <strong style={{ fontSize: 14 }}>{username}</strong>
+
           {mutualCount > 0 ? (
             <small
               className="text-secondary"

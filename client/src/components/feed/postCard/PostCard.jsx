@@ -7,26 +7,21 @@ import PostMeta from "./PostMeta";
 import PostTimestamp from "./PostTimestamp";
 import CommentBox from "../../comment/CommentBox";
 
-
 export default function PostCard({ post, onUpdate }) {
   const [showComments, setShowComments] = useState(false);
   const { user } = useContext(AuthContext);
 
-
-
-
   return (
     <>
       <div
-  id={post._id} // ✅ ADD HERE (VERY IMPORTANT)
-  className="border rounded mb-4 bg-white"
-  style={{
-    width: "100%",
-    maxWidth: "600px",
-    margin: "0 auto",
-  }}
->
-
+        id={post._id} // ✅ ADD HERE (VERY IMPORTANT)
+        className="border rounded mb-4 bg-white"
+        style={{
+          width: "100%",
+          maxWidth: "600px",
+          margin: "0 auto",
+        }}
+      >
         <PostHeader post={post} />
         <PostMedia post={post} />
         <PostAction
@@ -66,10 +61,7 @@ export default function PostCard({ post, onUpdate }) {
               transition: "transform 0.3s ease-in-out",
             }}
           >
-            <CommentBox
-              targetId={post._id}
-              targetType="post"
-            />
+            <CommentBox targetId={post._id} targetType="post" />
           </div>
         </>
       )}
