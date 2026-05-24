@@ -4,6 +4,7 @@ import {
   createHighlight,
   getUserHighlights,
   deleteHighlight,
+  addStoryToHighlight,
 } from "../controllers/highlightController.js";
 import upload from "../middleware/uploadMiddleware.js";
 
@@ -16,6 +17,7 @@ router.post(
   createHighlight
 );
 
+router.post("/add-story", protect, addStoryToHighlight);
 router.get("/:userId", getUserHighlights);
 router.delete("/:id", protect, deleteHighlight);
 

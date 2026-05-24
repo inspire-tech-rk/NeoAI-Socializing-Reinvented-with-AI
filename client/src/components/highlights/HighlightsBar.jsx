@@ -2,12 +2,12 @@ import { useEffect, useState, useRef } from "react";
 
 import axios from "axios";
 import { API_URL } from "../../config";
-import AddHighlightModal from "./AddHighlightModal";
+
 import HighlightCircle from "./HighlightCircle";
 
 export default function HighlightsBar({ userId, isOwnProfile }) {
   const [highlights, setHighlights] = useState([]);
-  const [showAdd, setShowAdd] = useState(false);
+ 
 
   useEffect(() => {
     fetchHighlights();
@@ -39,21 +39,7 @@ export default function HighlightsBar({ userId, isOwnProfile }) {
     <>
       <div ref={scrollRef} className="highlight-scroll mt-4 mb-3">
         {/* ➕ ADD NEW */}
-        {isOwnProfile && (
-          <div
-            className="highlight-item text-center"
-            style={{ cursor: "pointer" }}
-            onClick={() => setShowAdd(true)}
-          >
-            <div
-              className="rounded-circle border d-flex align-items-center justify-content-center"
-              style={{ width: 70, height: 70 }}
-            >
-              <i className="bi bi-plus fs-3"></i>
-            </div>
-            <small>New</small>
-          </div>
-        )}
+       
 
         {/* EXISTING HIGHLIGHTS */}
         {highlights.map((h) => (
@@ -68,13 +54,7 @@ export default function HighlightsBar({ userId, isOwnProfile }) {
         ))}
       </div>
 
-      {/* ✅ MODAL MUST BE HERE */}
-      {showAdd && (
-        <AddHighlightModal
-          onClose={() => setShowAdd(false)}
-          onCreated={fetchHighlights}
-        />
-      )}
+     
     </>
   );
 }

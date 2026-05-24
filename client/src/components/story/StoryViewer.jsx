@@ -19,6 +19,7 @@ export default function StoryViewer({
   const [isPlaying, setIsPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { user: loggedInUser } = useContext(AuthContext);
   const videoRef = useRef(null);
@@ -46,6 +47,7 @@ export default function StoryViewer({
   useEffect(() => {
     setStories(initialStories);
     setIndex(0);
+    setMenuOpen(false);
   }, [initialStories]);
 
   if (!Array.isArray(stories) || stories.length === 0) return null;
@@ -53,17 +55,22 @@ export default function StoryViewer({
   const story = stories[index];
 
   const nextStory = () => {
+    setMenuOpen(false);
+
     if (index < stories.length - 1) setIndex(index + 1);
     else onClose();
   };
 
   const prevStory = () => {
+    setMenuOpen(false);
+
     if (index > 0) setIndex(index - 1);
   };
 
   useEffect(() => {
     if (!story) return;
 
+    setMenuOpen(false);
     clearInterval(intervalRef.current);
 
     if (story.type === "video" && videoRef.current) {
@@ -109,6 +116,8 @@ export default function StoryViewer({
   const handleDelete = async (storyId) => {
     if (!onDeleteStory) return;
 
+    setMenuOpen(false);
+
     await onDeleteStory(storyId);
 
     setStories((prev) => {
@@ -125,6 +134,27 @@ export default function StoryViewer({
 
       return remaining;
     });
+  };
+
+  const addToHighlight = async () => {
+    try {
+      await fetch(`${API_URL}/api/highlights/add-story`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          storyId: story._id,
+        }),
+      });
+
+      alert("Story added to highlight");
+      setMenuOpen(false);
+    } catch (err) {
+      console.error("Add to highlight failed", err);
+      alert("Failed to add story to highlight");
+    }
   };
 
   return (
@@ -319,16 +349,46 @@ export default function StoryViewer({
             )}
 
             {story.user === loggedInUser?._id && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(story._id);
-                }}
-                style={controlBtnStyle}
-                title="Delete Story"
-              >
-                🗑️
-              </button>
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(!menuOpen);
+                  }}
+                  style={controlBtnStyle}
+                  title="More"
+                >
+                  ⋮
+                </button>
+
+                {menuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: "absolute",
+                      top: 34,
+                      right: 0,
+                      width: 160,
+                      background: "#222",
+                      border: "1px solid #444",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      zIndex: 9999,
+                    }}
+                  >
+                    <div
+                      onClick={() => handleDelete(story._id)}
+                      style={menuItemStyle}
+                    >
+                      🗑️ Delete
+                    </div>
+
+                    <div onClick={addToHighlight} style={menuItemStyle}>
+                      ⭐ Add to Highlight
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -349,4 +409,12 @@ const controlBtnStyle = {
   alignItems: "center",
   fontSize: 14,
   cursor: "pointer",
+};
+
+const menuItemStyle = {
+  padding: "10px 12px",
+  color: "#fff",
+  fontSize: 14,
+  cursor: "pointer",
+  borderBottom: "1px solid #333",
 };

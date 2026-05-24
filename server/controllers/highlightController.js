@@ -62,3 +62,59 @@ export const deleteHighlight = async (req, res) => {
     res.status(500).json({ message: "Delete failed" });
   }
 };
+
+
+/* -------------------- ADD STORY TO HIGHLIGHT -------------------- */
+export const addStoryToHighlight = async (req, res) => {
+  try {
+    const { storyId } = req.body;
+
+    const Story = (await import("../models/Story.js")).default;
+
+    const story = await Story.findById(storyId);
+
+    if (!story) {
+      return res.status(404).json({ message: "Story not found" });
+    }
+
+    if (story.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    let highlight = await Highlight.findOne({
+      user: req.user._id,
+      title: "Stories",
+    });
+
+    if (!highlight) {
+      highlight = await Highlight.create({
+        user: req.user._id,
+        title: "Stories",
+        cover: story.file,
+        items: [{ file: story.file }],
+      });
+    } else {
+      const alreadyAdded = highlight.items.some(
+        (item) => item.file === story.file
+      );
+
+      if (!alreadyAdded) {
+        highlight.items.push({ file: story.file });
+
+        if (!highlight.cover) {
+          highlight.cover = story.file;
+        }
+
+        await highlight.save();
+      }
+    }
+
+    res.json({
+      success: true,
+      highlight,
+    });
+  } catch (err) {
+    console.error("Add story to highlight error:", err);
+    res.status(500).json({ message: "Failed to add story to highlight" });
+  }
+};
