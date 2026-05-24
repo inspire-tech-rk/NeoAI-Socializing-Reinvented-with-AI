@@ -19,21 +19,27 @@ const getMediaUrl = (file) => {
 function PostCard({ post, onDelete, onSelect }) {
   const mediaUrl = getMediaUrl(post.file);
 
-  const isVideo =
-    post.type === "video" || /\.(mp4|webm|mov)$/i.test(post.file || "");
+const isVideo =
+  post.type === "video" ||
+  post.type === "reel" ||
+  /\.(mp4|webm|mov|mkv)$/i.test(post.file || "");
 
   return (
     <div className="col-6 col-xl-4">
       <div className="position-relative">
         {isVideo ? (
           <video
-            src={mediaUrl}
             preload="metadata"
             muted
+            controls
+            playsInline
             className="w-100 rounded"
             style={{ height: "220px", objectFit: "cover" }}
             onClick={() => onSelect({ ...post, video: mediaUrl })}
-          />
+          >
+            <source src={mediaUrl} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         ) : (
           <img
             src={mediaUrl}
@@ -140,7 +146,7 @@ export default function Profile() {
 
     const followingIds =
       loggedInUser.following?.map((id) =>
-        typeof id === "object" ? id._id : id
+        typeof id === "object" ? id._id : id,
       ) || [];
 
     setIsFollowing(followingIds.includes(profileUser._id));
@@ -156,7 +162,7 @@ export default function Profile() {
           `${API_URL}/api/posts/user/${profileUser._id}`,
           {
             withCredentials: true,
-          }
+          },
         );
         setProfilePosts(res.data);
       } catch (err) {
@@ -301,7 +307,7 @@ export default function Profile() {
                     const res = await axios.post(
                       `${API_URL}/api/users/${profileUser._id}/follow`,
                       {},
-                      { withCredentials: true }
+                      { withCredentials: true },
                     );
 
                     if (res.data.requested) {
