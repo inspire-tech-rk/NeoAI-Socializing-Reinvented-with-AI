@@ -1,10 +1,60 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_URL } from "../../../config";
+
 export default function PostMeta({ post }) {
+  const [comments, setComments] = useState([]);
+  const [showComments, setShowComments] = useState(false);
+
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/comments/${post._id}`, {
+          withCredentials: true,
+        });
+
+        setComments(res.data);
+      } catch (err) {
+        console.error("Failed to load comments", err);
+      }
+    };
+
+    if (post?._id) fetchComments();
+  }, [post?._id]);
+
   return (
-    <div className="px-2">
-      {/* Likes removed */}
+    <div className="px-2 pb-2">
       <p className="mb-1">
-        <strong>{post.user.username}</strong> {post.caption}
+        <strong>{post.user?.username}</strong> {post.caption}
       </p>
+
+      {comments.length > 0 && (
+        <button
+          onClick={() => setShowComments(!showComments)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            color: "#777",
+            fontSize: "14px",
+            cursor: "pointer",
+          }}
+        >
+          {showComments
+            ? "Hide comments"
+            : `View all ${comments.length} comments`}
+        </button>
+      )}
+
+      {showComments && (
+        <div className="mt-2">
+          {comments.map((comment) => (
+            <p key={comment._id} className="mb-1" style={{ fontSize: "14px" }}>
+              <strong>{comment.user?.username}</strong> {comment.text}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
