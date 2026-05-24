@@ -98,13 +98,21 @@ export const deleteStory = async (req, res) => {
 
 export const toggleStoryLike = async (req, res) => {
   try {
-    const story = await Story.findById(req.params.id);
+    const story = await Story.findById(req.params.id).populate(
+      "likes",
+      "username dp",
+    );
 
-    if (!story) return res.status(404).json({ message: "Story not found" });
+    if (!story) {
+      return res.status(404).json({
+        message: "Story not found",
+      });
+    }
 
     const userId = req.user._id;
+
     const alreadyLiked = story.likes.some(
-      (id) => id.toString() === userId.toString(),
+      (u) => u._id.toString() === userId.toString(),
     );
 
     if (alreadyLiked) {
@@ -112,6 +120,7 @@ export const toggleStoryLike = async (req, res) => {
     } else {
       story.likes.addToSet(userId);
 
+      // ✅ NOTIFICATION
       if (story.user.toString() !== userId.toString()) {
         await Notification.create({
           recipient: story.user,
@@ -124,13 +133,21 @@ export const toggleStoryLike = async (req, res) => {
 
     await story.save();
 
+    const updatedStory = await Story.findById(story._id)
+      .populate("likes", "username dp")
+      .populate("comments.user", "username dp");
+
     res.json({
       liked: !alreadyLiked,
-      likesCount: story.likes.length,
+      likes: updatedStory.likes,
+      comments: updatedStory.comments,
     });
   } catch (err) {
-    console.error("Story like error:", err);
-    res.status(500).json({ message: "Story like failed" });
+    console.error(err);
+
+    res.status(500).json({
+      message: "Story like failed",
+    });
   }
 };
 
@@ -139,12 +156,18 @@ export const commentOnStory = async (req, res) => {
     const { text } = req.body;
 
     if (!text?.trim()) {
-      return res.status(400).json({ message: "Comment required" });
+      return res.status(400).json({
+        message: "Comment required",
+      });
     }
 
     const story = await Story.findById(req.params.id);
 
-    if (!story) return res.status(404).json({ message: "Story not found" });
+    if (!story) {
+      return res.status(404).json({
+        message: "Story not found",
+      });
+    }
 
     story.comments.push({
       user: req.user._id,
@@ -153,6 +176,7 @@ export const commentOnStory = async (req, res) => {
 
     await story.save();
 
+    // ✅ NOTIFICATION
     if (story.user.toString() !== req.user._id.toString()) {
       await Notification.create({
         recipient: story.user,
@@ -163,12 +187,21 @@ export const commentOnStory = async (req, res) => {
       });
     }
 
+    const updatedStory = await Story.findById(story._id)
+      .populate("likes", "username dp")
+      .populate("comments.user", "username dp");
+
     res.json({
       success: true,
-      comments: story.comments,
+      likes: updatedStory.likes,
+      comments: updatedStory.comments,
     });
+
   } catch (err) {
-    console.error("Story comment error:", err);
-    res.status(500).json({ message: "Story comment failed" });
+    console.error(err);
+
+    res.status(500).json({
+      message: "Story comment failed",
+    });
   }
 };

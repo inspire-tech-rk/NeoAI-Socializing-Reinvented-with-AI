@@ -21,6 +21,8 @@ export default function StoryViewer({
   const [progress, setProgress] = useState(0);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState([]);
+  const [comments, setComments] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const { user: loggedInUser } = useContext(AuthContext);
@@ -73,8 +75,11 @@ export default function StoryViewer({
   useEffect(() => {
     if (!story || !loggedInUser?._id) return;
 
+    setLikes(story.likes || []);
+    setComments(story.comments || []);
+
     const alreadyLiked = story.likes?.some(
-      (id) => id?.toString() === loggedInUser._id.toString()
+      (u) => (u._id || u)?.toString() === loggedInUser._id.toString()
     );
 
     setLiked(!!alreadyLiked);
@@ -184,23 +189,10 @@ export default function StoryViewer({
       const data = await res.json();
 
       setLiked(data.liked);
-
-      setStories((prev) =>
-        prev.map((s) =>
-          s._id === story._id
-            ? {
-                ...s,
-                likes: data.liked
-                  ? [...(s.likes || []), loggedInUser._id]
-                  : (s.likes || []).filter(
-                      (id) => id.toString() !== loggedInUser._id.toString()
-                    ),
-              }
-            : s
-        )
-      );
+      setLikes(data.likes || []);
+      setComments(data.comments || []);
     } catch (err) {
-      console.error("Story like failed", err);
+      console.error(err);
     }
   };
 
@@ -211,19 +203,24 @@ export default function StoryViewer({
     if (!commentText.trim()) return;
 
     try {
-      await fetch(`${API_URL}/api/stories/${story._id}/comment`, {
+      const res = await fetch(`${API_URL}/api/stories/${story._id}/comment`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: commentText }),
+        body: JSON.stringify({
+          text: commentText,
+        }),
       });
 
+      const data = await res.json();
+
+      setLikes(data.likes || []);
+      setComments(data.comments || []);
       setCommentText("");
-      alert("Comment sent");
     } catch (err) {
-      console.error("Story comment failed", err);
+      console.error(err);
     }
   };
 
@@ -507,6 +504,87 @@ export default function StoryViewer({
               {liked ? "♥" : "♡"}
             </button>
           </form>
+
+          {story.user === loggedInUser?._id && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 72,
+                left: 14,
+                right: 14,
+                maxHeight: 180,
+                overflowY: "auto",
+                zIndex: 30,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {likes.length > 0 && (
+                <div
+                  style={{
+                    marginBottom: 10,
+                    background: "rgba(0,0,0,0.4)",
+                    padding: 10,
+                    borderRadius: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#ff4d88",
+                      fontWeight: 600,
+                      marginBottom: 6,
+                    }}
+                  >
+                    ♥ {likes.length} Likes
+                  </div>
+
+                  {likes.map((u) => (
+                    <div
+                      key={u._id}
+                      style={{
+                        color: "#fff",
+                        fontSize: 13,
+                      }}
+                    >
+                      @{u.username}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {comments.length > 0 && (
+                <div
+                  style={{
+                    background: "rgba(0,0,0,0.4)",
+                    padding: 10,
+                    borderRadius: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#fff",
+                      fontWeight: 600,
+                      marginBottom: 6,
+                    }}
+                  >
+                    💬 {comments.length} Comments
+                  </div>
+
+                  {comments.map((c, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        color: "#fff",
+                        fontSize: 13,
+                        marginBottom: 5,
+                      }}
+                    >
+                      <strong>@{c.user?.username}</strong> {c.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
