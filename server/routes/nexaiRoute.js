@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../middleware/uploadMiddleware.js";
 
 import {
   askNexAI,
@@ -13,8 +14,7 @@ import {
 
 const router = express.Router();
 
-router.post("/ask", askNexAI);
-
+router.post("/ask", upload.single("image"), askNexAI);
 router.post("/chat", createNexAIChat);
 router.get("/chats/:userId", getNexAIChats);
 router.get("/chat/:chatId", getSingleNexAIChat);

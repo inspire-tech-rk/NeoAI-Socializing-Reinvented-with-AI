@@ -5,8 +5,9 @@ const messageSchema = new mongoose.Schema(
     role: String,
     content: String,
     type: String,
+    image: String,
   },
-  { _id: false },
+  { _id: false }
 );
 
 const nexAIChatSchema = new mongoose.Schema(

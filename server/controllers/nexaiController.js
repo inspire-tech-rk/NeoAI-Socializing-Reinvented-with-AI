@@ -41,7 +41,7 @@ export const getNexAIChats = async (req, res) => {
     const { userId } = req.params;
 
     const chats = await NexAIChat.find({ userId })
-      .select("title createdAt updatedAt messages")
+      .select("title pinned createdAt updatedAt messages")
       .sort({ pinned: -1, updatedAt: -1 });
 
     res.json(chats);
@@ -97,9 +97,10 @@ export const clearNexAIChats = async (req, res) => {
 export const askNexAI = async (req, res) => {
   try {
     const { question, history, userId, chatId } = req.body;
+    const imageUrl = req.file ? req.file.path : "";
 
-    if (!question) {
-      return res.status(400).json({ message: "Question is required" });
+    if (!question && !imageUrl) {
+      return res.status(400).json({ message: "Question or image is required" });
     }
 
     let chat;
@@ -131,13 +132,48 @@ export const askNexAI = async (req, res) => {
       },
     ];
 
+    if (imageUrl) {
+      try {
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: question || "Describe this image" },
+                {
+                  fileData: {
+                    mimeType: req.file.mimetype,
+                    fileUri: imageUrl,
+                  },
+                },
+              ],
+            },
+          ],
+        });
+
+        const text = response.text;
+
+        chat.messages.push(
+          { role: "user", content: question, image: imageUrl },
+          { role: "assistant", content: text, type: "normal" }
+        );
+
+        await chat.save();
+
+        return res.json({ answer: text, chat });
+      } catch (err) {
+        console.error("Gemini image failed:", err.response?.data || err.message);
+      }
+    }
+
     const cacheKey = `${userId}:${question}`;
     const cached = cache.get(cacheKey);
 
     if (cached) {
       chat.messages.push(
-        { role: "user", content: question },
-        { role: "assistant", content: cached, type: "normal" },
+        { role: "user", content: question, image: imageUrl },
+        { role: "assistant", content: cached, type: "normal" }
       );
 
       await chat.save();
@@ -166,7 +202,7 @@ export const askNexAI = async (req, res) => {
               "https://neo-ai-socializing-reinvented-with.vercel.app",
             "X-Title": "NexAI",
           },
-        },
+        }
       );
 
       text = response.data.choices[0].message.content;
@@ -188,7 +224,7 @@ export const askNexAI = async (req, res) => {
               Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
               "Content-Type": "application/json",
             },
-          },
+          }
         );
 
         text = response.data.choices[0].message.content;
@@ -224,8 +260,8 @@ export const askNexAI = async (req, res) => {
     cache.set(cacheKey, text);
 
     chat.messages.push(
-      { role: "user", content: question },
-      { role: "assistant", content: text, type: "normal" },
+      { role: "user", content: question, image: imageUrl },
+      { role: "assistant", content: text, type: "normal" }
     );
 
     await chat.save();
@@ -248,7 +284,7 @@ export const renameNexAIChat = async (req, res) => {
     const chat = await NexAIChat.findByIdAndUpdate(
       chatId,
       { title },
-      { new: true },
+      { new: true }
     );
 
     res.json(chat);
