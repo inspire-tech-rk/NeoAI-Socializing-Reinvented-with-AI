@@ -6,293 +6,234 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// =========================
-// ✅ GEMINI CLIENT
-// =========================
 const gemini = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-// =========================
-// ✅ CACHE (10 MIN)
-// =========================
 const cache = new NodeCache({
   stdTTL: 600,
 });
 
-// =========================
-// ✅ MAIN CONTROLLER
-// =========================
-export const askNexAI = async (req, res) => {
+const getTitleFromQuestion = (question) => {
+  if (!question) return "New Chat";
+  return question.length > 35 ? question.slice(0, 35) + "..." : question;
+};
+
+export const createNexAIChat = async (req, res) => {
   try {
-    // ✅ Get question + history + userId
-    const { question, history, userId } = req.body;
+    const { userId } = req.body;
 
-    // =========================
-    // ✅ VALIDATION
-    // =========================
-    if (!question) {
-      return res.status(400).json({
-        message: "Question is required",
-      });
-    }
-
-    // =========================
-    // ✅ FIND OLD CHAT
-    // =========================
-    let chat = await NexAIChat.findOne({
+    const chat = await NexAIChat.create({
       userId,
+      title: "New Chat",
+      messages: [],
     });
 
-    // =========================
-    // ✅ CREATE CHAT IF NOT EXISTS
-    // =========================
+    res.status(201).json(chat);
+  } catch (err) {
+    console.error("Create NexAI chat error:", err);
+    res.status(500).json({ message: "Failed to create chat" });
+  }
+};
+
+export const getNexAIChats = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const chats = await NexAIChat.find({ userId })
+      .select("title createdAt updatedAt messages")
+      .sort({ updatedAt: -1 });
+
+    res.json(chats);
+  } catch (err) {
+    console.error("Get NexAI chats error:", err);
+    res.status(500).json({ message: "Failed to load chats" });
+  }
+};
+
+export const getSingleNexAIChat = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    const chat = await NexAIChat.findById(chatId);
+
     if (!chat) {
-      chat = new NexAIChat({
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    res.json(chat);
+  } catch (err) {
+    console.error("Get single NexAI chat error:", err);
+    res.status(500).json({ message: "Failed to load chat" });
+  }
+};
+
+export const deleteNexAIChat = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    await NexAIChat.findByIdAndDelete(chatId);
+
+    res.json({ message: "Chat deleted" });
+  } catch (err) {
+    console.error("Delete NexAI chat error:", err);
+    res.status(500).json({ message: "Failed to delete chat" });
+  }
+};
+
+export const clearNexAIChats = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    await NexAIChat.deleteMany({ userId });
+
+    res.json({ message: "All chats cleared" });
+  } catch (err) {
+    console.error("Clear NexAI chats error:", err);
+    res.status(500).json({ message: "Failed to clear chats" });
+  }
+};
+
+export const askNexAI = async (req, res) => {
+  try {
+    const { question, history, userId, chatId } = req.body;
+
+    if (!question) {
+      return res.status(400).json({ message: "Question is required" });
+    }
+
+    let chat;
+
+    if (chatId) {
+      chat = await NexAIChat.findById(chatId);
+    }
+
+    if (!chat) {
+      chat = await NexAIChat.create({
         userId,
+        title: getTitleFromQuestion(question),
         messages: [],
       });
     }
 
-    // =========================
-    // ✅ CONVERSATION MEMORY
-    // =========================
+    if (!chat.title || chat.title === "New Chat") {
+      chat.title = getTitleFromQuestion(question);
+    }
+
     const conversation = [
       ...(history || []).map((msg) => ({
         role: msg.role === "assistant" ? "assistant" : "user",
-
         content: msg.content,
       })),
-
       {
         role: "user",
         content: question,
       },
     ];
 
-    // =========================
-    // ✅ CACHE CHECK
-    // =========================
-    const cached = cache.get(question);
+    const cacheKey = `${userId}:${question}`;
+    const cached = cache.get(cacheKey);
 
     if (cached) {
+      chat.messages.push(
+        { role: "user", content: question },
+        { role: "assistant", content: cached, type: "normal" }
+      );
+
+      await chat.save();
+
       return res.json({
-        answer: cached + " (cached)",
+        answer: cached,
+        chat,
       });
     }
 
-    // ==================================================
-    // 🔵 1. OPENROUTER (PRIMARY)
-    // ==================================================
+    let text = null;
+
     try {
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
           model: "meta-llama/llama-3.1-8b-instruct:free",
-
           messages: conversation,
         },
         {
           headers: {
             Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:3000",
+            "HTTP-Referer": process.env.FRONTEND_URL || "https://neo-ai-socializing-reinvented-with.vercel.app",
             "X-Title": "NexAI",
           },
-        },
+        }
       );
 
-      const text = response.data.choices[0].message.content;
-
-      // ✅ Save cache
-      cache.set(question, text);
-
-      // ✅ SAVE CHAT IN DATABASE
-      chat.messages.push(
-        {
-          role: "user",
-          content: question,
-        },
-        {
-          role: "assistant",
-          content: text,
-          type: "normal",
-        },
-      );
-
-      await chat.save();
-
+      text = response.data.choices[0].message.content;
       console.log("✅ Answer from OpenRouter");
-
-      return res.json({
-        answer: text,
-      });
-   } catch (err) {
-  console.error("OpenRouter failed:", err.response?.data || err.message);
-}
-
-    // ==================================================
-    // 🟣 2. GROQ (BACKUP)
-    // ==================================================
-    try {
-      const response = await axios.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          model: "llama-3.1-8b-instant",
-
-          messages: conversation,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      const text = response.data.choices[0].message.content;
-
-      // ✅ Save cache
-      cache.set(question, text);
-
-      // ✅ SAVE CHAT IN DATABASE
-      chat.messages.push(
-        {
-          role: "user",
-          content: question,
-        },
-        {
-          role: "assistant",
-          content: text,
-          type: "normal",
-        },
-      );
-
-      await chat.save();
-
-      console.log("✅ Answer from Groq");
-
-      return res.json({
-        answer: text,
-      });
-   } catch (err) {
-  console.error("Groq failed:", err.response?.data || err.message);
-}
-
-    // ==================================================
-    // 🟢 3. GEMINI (LAST FALLBACK)
-    // ==================================================
-    try {
-      const response = await gemini.models.generateContent({
-        model: "gemini-2.0-flash",
-
-        contents: conversation.map((msg) => ({
-          role: msg.role,
-          parts: [
-            {
-              text: msg.content,
-            },
-          ],
-        })),
-      });
-
-      const text = response.text;
-
-      // ✅ Save cache
-      cache.set(question, text);
-
-      // ✅ SAVE CHAT IN DATABASE
-      chat.messages.push(
-        {
-          role: "user",
-          content: question,
-        },
-        {
-          role: "assistant",
-          content: text,
-          type: "normal",
-        },
-      );
-
-      await chat.save();
-
-      console.log("✅ Answer from Gemini");
-
-      return res.json({
-        answer: text,
-      });
     } catch (err) {
-  console.error("Gemini failed:", err.response?.data || err.message);
-}
+      console.error("OpenRouter failed:", err.response?.data || err.message);
+    }
 
-    // ==================================================
-    // 🔴 CACHE FALLBACK
-    // ==================================================
-    const fallback = cache.get(question);
+    if (!text) {
+      try {
+        const response = await axios.post(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            model: "llama-3.1-8b-instant",
+            messages: conversation,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-    if (fallback) {
-      return res.json({
-        answer: fallback + " (old cached)",
+        text = response.data.choices[0].message.content;
+        console.log("✅ Answer from Groq");
+      } catch (err) {
+        console.error("Groq failed:", err.response?.data || err.message);
+      }
+    }
+
+    if (!text) {
+      try {
+        const response = await gemini.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: conversation.map((msg) => ({
+            role: msg.role,
+            parts: [{ text: msg.content }],
+          })),
+        });
+
+        text = response.text;
+        console.log("✅ Answer from Gemini");
+      } catch (err) {
+        console.error("Gemini failed:", err.response?.data || err.message);
+      }
+    }
+
+    if (!text) {
+      return res.status(500).json({
+        message: "⚠️ All AI services failed. Try again later.",
       });
     }
 
-    // ==================================================
-    // ❌ FINAL FAILURE
-    // ==================================================
-    return res.status(500).json({
-      message: "⚠️ All AI services failed. Try again later.",
-    });
-  } catch (err) {
-    console.log("❌ Controller Error:", err);
+    cache.set(cacheKey, text);
 
-    res.status(500).json({
-      message: "Internal Server Error",
-    });
-  }
-};
+    chat.messages.push(
+      { role: "user", content: question },
+      { role: "assistant", content: text, type: "normal" }
+    );
 
-// =========================
-// ✅ GET OLD CHATS
-// =========================
-export const getNexAIChats = async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const chat = await NexAIChat.findOne({
-      userId,
-    });
-
-    if (!chat) {
-      return res.json([]);
-    }
-
-    res.json(chat.messages);
-  } catch (err) {
-    console.log(err);
-
-    res.status(500).json({
-      message: "Failed to load chats",
-    });
-  }
-};
-
-// =========================
-// ✅ CLEAR CHATS
-// =========================
-export const clearNexAIChats = async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    await NexAIChat.findOneAndDelete({
-      userId,
-    });
+    await chat.save();
 
     res.json({
-      message: "Chats cleared",
+      answer: text,
+      chat,
     });
   } catch (err) {
-    res.status(500).json({
-      message: "Failed to clear chats",
-    });
+    console.error("NexAI controller error:", err);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };

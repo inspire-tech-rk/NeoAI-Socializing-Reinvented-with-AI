@@ -17,6 +17,11 @@ const nexAIChatSchema = new mongoose.Schema(
       required: true,
     },
 
+    title: {
+      type: String,
+      default: "New Chat",
+    },
+
     messages: [messageSchema],
   },
   {
@@ -24,7 +29,4 @@ const nexAIChatSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model(
-  "NexAIChat",
-  nexAIChatSchema
-);
+export default mongoose.model("NexAIChat", nexAIChatSchema);

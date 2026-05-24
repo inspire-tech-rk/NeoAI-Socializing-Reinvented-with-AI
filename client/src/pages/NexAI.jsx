@@ -4,304 +4,327 @@ import { API_URL } from "../config";
 
 export default function NexAI() {
   const [query, setQuery] = useState("");
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [typingText, setTypingText] = useState("");
-  const typingRef = useRef(null);
 
-const chatContainerRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const bottomRef = useRef(null);
 
-const bottomRef = useRef(null);
-
-const shouldAutoScroll = useRef(true);
-
-
-  // ✅ USER ID
   const user = JSON.parse(localStorage.getItem("user"));
-
-  console.log("USER:", user);
-
   const userId = user?._id || user?.user?._id;
 
-  console.log("USER ID:", userId);
+  const scrollBottom = () => {
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
-  // =========================================
-  // ✅ LOAD CHATS FROM DATABASE
-  // =========================================
- useEffect(() => {
   const loadChats = async () => {
-    try {
-      const res = await axios.get(
-        `${API_URL}/api/nexai/history/${userId}`
-      );
+    if (!userId) return;
 
-      setMessages(res.data);
+    const res = await axios.get(`${API_URL}/api/nexai/chats/${userId}`, {
+      withCredentials: true,
+    });
 
-      // ✅ OPEN FROM BOTTOM
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({
-          behavior: "auto",
-        });
-      }, 100);
+    setChats(res.data);
 
-    } catch (err) {
-      console.log(err);
+    if (res.data.length > 0 && !activeChatId) {
+      setActiveChatId(res.data[0]._id);
+      setMessages(res.data[0].messages || []);
     }
   };
 
-  if (userId) {
+  useEffect(() => {
     loadChats();
-  }
-}, [userId]);
+  }, [userId]);
 
-// =========================================
-// ✅ SMART AUTO SCROLL
-// =========================================
-useEffect(() => {
-  // ✅ Only auto scroll if user is already near bottom
-  if (shouldAutoScroll.current) {
-    setTimeout(() => {
-      bottomRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }, 50);
-  }
-}, [messages]);
+  useEffect(() => {
+    scrollBottom();
+  }, [messages]);
 
+  const createNewChat = async () => {
+    const res = await axios.post(
+      `${API_URL}/api/nexai/chat`,
+      { userId },
+      { withCredentials: true }
+    );
 
-
-
-  // =========================================
-  // ✅ TYPEWRITER EFFECT
-  // =========================================
-  const typeMessage = (text) => {
-    let index = 0;
-
-    setTypingText("");
-
-    clearInterval(typingRef.current);
-
-    typingRef.current = setInterval(() => {
-      setTypingText((prev) => prev + text[index]);
-
-      index++;
-
-      if (index >= text.length) {
-        clearInterval(typingRef.current);
-      }
-    }, 20);
+    setChats((prev) => [res.data, ...prev]);
+    setActiveChatId(res.data._id);
+    setMessages([]);
   };
 
-  // =========================================
-// ✅ DETECT USER SCROLL
-// =========================================
-const handleScroll = () => {
-  const container = chatContainerRef.current;
+  const openChat = async (chatId) => {
+    const res = await axios.get(`${API_URL}/api/nexai/chat/${chatId}`, {
+      withCredentials: true,
+    });
 
-  if (!container) return;
+    setActiveChatId(chatId);
+    setMessages(res.data.messages || []);
+  };
 
-  const threshold = 100;
+  const deleteChat = async (chatId, e) => {
+    e.stopPropagation();
 
-  const isNearBottom =
-    container.scrollHeight -
-      container.scrollTop -
-      container.clientHeight <
-    threshold;
+    await axios.delete(`${API_URL}/api/nexai/chat/${chatId}`, {
+      withCredentials: true,
+    });
 
-  shouldAutoScroll.current = isNearBottom;
-};
+    const remaining = chats.filter((c) => c._id !== chatId);
+    setChats(remaining);
 
-  // =========================================
-  // ✅ HANDLE SEARCH
-  // =========================================
+    if (activeChatId === chatId) {
+      if (remaining.length > 0) {
+        setActiveChatId(remaining[0]._id);
+        setMessages(remaining[0].messages || []);
+      } else {
+        setActiveChatId(null);
+        setMessages([]);
+      }
+    }
+  };
+
+  const clearAllChats = async () => {
+    if (!window.confirm("Delete all chats?")) return;
+
+    await axios.delete(`${API_URL}/api/nexai/clear/${userId}`, {
+      withCredentials: true,
+    });
+
+    setChats([]);
+    setActiveChatId(null);
+    setMessages([]);
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
 
     if (!query.trim()) return;
 
-    // ✅ USER MESSAGE
+    let chatId = activeChatId;
+
+    if (!chatId) {
+      const newChat = await axios.post(
+        `${API_URL}/api/nexai/chat`,
+        { userId },
+        { withCredentials: true }
+      );
+
+      chatId = newChat.data._id;
+      setActiveChatId(chatId);
+      setChats((prev) => [newChat.data, ...prev]);
+    }
+
     const userMessage = {
       role: "user",
       content: query,
     };
 
-    // ✅ UPDATE CHAT
     const updatedMessages = [...messages, userMessage];
 
-    // ✅ SHOW USER MESSAGE
     setMessages(updatedMessages);
-
     setQuery("");
-
     setLoading(true);
 
     try {
-      // ✅ SEND TO BACKEND
       const res = await axios.post(
         `${API_URL}/api/nexai/ask`,
         {
           question: query,
-          history: updatedMessages,
+          history: messages,
           userId,
+          chatId,
         },
-        {
-          withCredentials: true,
-        },
+        { withCredentials: true }
       );
 
-      // ✅ AI MESSAGE
       const aiMessage = {
         role: "assistant",
         content: res.data.answer,
         type: "normal",
       };
 
-      // ✅ SHOW AI MESSAGE
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages([...updatedMessages, aiMessage]);
 
-      // ✅ START TYPING EFFECT
-      typeMessage(res.data.answer);
+      setChats((prev) => {
+        const filtered = prev.filter((c) => c._id !== res.data.chat._id);
+        return [res.data.chat, ...filtered];
+      });
+
+      setActiveChatId(res.data.chat._id);
     } catch (err) {
-      console.error("NexAI Error:", err);
-
-      // ✅ ERROR MESSAGE
       const serverMessage =
         err.response?.data?.message || "⚠️ AI service unavailable.";
 
-      const errorMessage = {
-        role: "assistant",
-        content: serverMessage,
-        type: "error",
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
-
-      typeMessage(serverMessage);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: serverMessage,
+          type: "error",
+        },
+      ]);
     }
 
     setLoading(false);
   };
 
-  // =========================================
-  // ✅ CLEAR CHAT
-  // =========================================
-  const clearChat = async () => {
-    try {
-      await axios.delete(`${API_URL}/api/nexai/clear/${userId}`);
-
-      setMessages([]);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
   return (
-    <div className="container-fluid vh-100 bg-black text-white d-flex flex-column">
-      {/* HEADER */}
-      <div className="text-center py-3 border-bottom border-secondary position-relative">
-        <h4 className="fw-bold">🤖 NexAI Assistant</h4>
-
-        <small>Ask anything — powered by AI</small>
-
-        {/* CLEAR BUTTON */}
-        <button
-          className="btn btn-sm btn-danger position-absolute"
-          style={{
-            right: "20px",
-            top: "20px",
-          }}
-          onClick={clearChat}
-        >
-          Clear
-        </button>
-      </div>
-
-      {/* CHAT MESSAGES */}
-     <div
-  ref={chatContainerRef}
-  onScroll={handleScroll}
-  className="flex-grow-1 overflow-auto p-3"
-  style={{
-    background: "#000",
-  }}
->
-        {messages.length === 0 && (
-          <div className="text-center text-secondary mt-5">
-            Ask your first question ✨
-          </div>
-        )}
-
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`d-flex mb-3 ${
-              msg.role === "user"
-                ? "justify-content-end"
-                : "justify-content-start"
-            }`}
-          >
-            <div
-              className="px-3 py-2 rounded"
-              style={{
-                maxWidth: "75%",
-
-                background:
-                  msg.role === "user"
-                    ? "#0d6efd"
-                    : msg.type === "error"
-                      ? "#dc3545"
-                      : "#1c1c1c",
-
-                color: "#fff",
-
-                fontWeight: msg.type === "error" ? "bold" : "normal",
-
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {msg.role === "assistant" &&
-              idx === messages.length - 1 &&
-              loading &&
-              msg.type !== "error"
-                ? typingText
-                : msg.content}
-            </div>
-          </div>
-        ))}
-        <div ref={bottomRef}></div>
-
-        {/* LOADING */}
-        {loading && (
-          <div className="text-secondary small">NexAI is thinking...</div>
-        )}
-       
-      </div>
-
-      {/* INPUT FORM */}
-      <form
-        onSubmit={handleSearch}
-        className="p-3 border-top border-secondary d-flex gap-2"
+    <div
+      className="d-flex bg-black text-white"
+      style={{ height: "100vh", width: "100%" }}
+    >
+      {/* LEFT CHAT HISTORY */}
+      <div
         style={{
-          background: "#000",
+          width: 280,
+          borderRight: "1px solid #2c2c2c",
+          background: "#050505",
+          padding: "12px",
+          overflowY: "auto",
         }}
       >
-        <input
-          type="text"
-          className="form-control bg-dark text-white border-secondary"
-          placeholder="Ask NexAI anything..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-
         <button
-          type="submit"
-          className="btn btn-primary px-4"
-          disabled={loading}
+          className="btn btn-primary w-100 mb-3"
+          onClick={createNewChat}
         >
-          {loading ? "..." : "Ask"}
+          + New Chat
         </button>
-      </form>
+
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <strong>Recent Chats</strong>
+          {chats.length > 0 && (
+            <button
+              className="btn btn-sm btn-danger"
+              onClick={clearAllChats}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {chats.length === 0 && (
+          <p className="text-secondary small">No chats yet</p>
+        )}
+
+        {chats.map((chat) => (
+          <div
+            key={chat._id}
+            onClick={() => openChat(chat._id)}
+            className="d-flex justify-content-between align-items-center"
+            style={{
+              padding: "10px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              background:
+                activeChatId === chat._id ? "#1c1c1c" : "transparent",
+              marginBottom: "6px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "14px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "200px",
+              }}
+            >
+              {chat.title || "New Chat"}
+            </span>
+
+            <span
+              onClick={(e) => deleteChat(chat._id, e)}
+              style={{
+                color: "#aaa",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              ✕
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* RIGHT CHAT AREA */}
+      <div className="flex-grow-1 d-flex flex-column">
+        <div className="text-center py-3 border-bottom border-secondary">
+          <h4 className="fw-bold">🤖 NexAI Assistant</h4>
+          <small>Ask anything — powered by AI</small>
+        </div>
+
+        <div
+          ref={chatContainerRef}
+          className="flex-grow-1 overflow-auto p-3"
+          style={{ background: "#000" }}
+        >
+          {messages.length === 0 && (
+            <div className="text-center text-secondary mt-5">
+              Ask your first question ✨
+            </div>
+          )}
+
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`d-flex mb-3 ${
+                msg.role === "user"
+                  ? "justify-content-end"
+                  : "justify-content-start"
+              }`}
+            >
+              <div
+                className="px-3 py-2 rounded"
+                style={{
+                  maxWidth: "75%",
+                  background:
+                    msg.role === "user"
+                      ? "#0d6efd"
+                      : msg.type === "error"
+                      ? "#dc3545"
+                      : "#1c1c1c",
+                  color: "#fff",
+                  fontWeight: msg.type === "error" ? "bold" : "normal",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="text-secondary small">NexAI is thinking...</div>
+          )}
+
+          <div ref={bottomRef}></div>
+        </div>
+
+        <form
+          onSubmit={handleSearch}
+          className="p-3 border-top border-secondary d-flex gap-2"
+          style={{ background: "#000" }}
+        >
+          <input
+            type="text"
+            className="form-control bg-dark text-white border-secondary"
+            placeholder="Ask NexAI anything..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+
+          <button
+            type="submit"
+            className="btn btn-primary px-4"
+            disabled={loading}
+          >
+            {loading ? "..." : "Ask"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
