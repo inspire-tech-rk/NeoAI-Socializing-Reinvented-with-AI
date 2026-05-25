@@ -14,7 +14,7 @@ export default function SwitchAccount() {
 
   const handleSwitch = () => {
     localStorage.removeItem("user");
-    window.location.href = "/login";
+    window.location.href = "/auth";
   };
 
   if (!loggedUser) return null;
