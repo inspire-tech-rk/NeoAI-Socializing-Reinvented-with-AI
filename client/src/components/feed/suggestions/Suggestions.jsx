@@ -3,6 +3,7 @@ import SuggestionList from "./SuggestionList";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_URL } from "../../../config";
+import SwitchAccount from "./SwitchAccount";
 
 export default function Suggestions() {
   const [suggestions, setSuggestions] = useState([]);
@@ -48,6 +49,7 @@ const handleFollowChange = ({ userId, status }) => {
       }}
     >
       {/* Header */}
+      <SwitchAccount />
       <SuggestionHeader />
 
       {/* Loading state */}
