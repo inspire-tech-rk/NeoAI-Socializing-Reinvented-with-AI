@@ -19,10 +19,10 @@ const getMediaUrl = (file) => {
 function PostCard({ post, onDelete, onSelect }) {
   const mediaUrl = getMediaUrl(post.file);
 
-const isVideo =
-  post.type === "video" ||
-  post.type === "reel" ||
-  /\.(mp4|webm|mov|mkv)$/i.test(post.file || "");
+  const isVideo =
+    post.type === "video" ||
+    post.type === "reel" ||
+    /\.(mp4|webm|mov|mkv)$/i.test(post.file || "");
 
   return (
     <div className="col-6 col-xl-4">
@@ -68,7 +68,7 @@ function RightSlidePanel({ title, users, onClose }) {
   const [search, setSearch] = useState("");
 
   const filteredUsers = (users || []).filter((u) =>
-    u?.username?.toLowerCase().includes(search.toLowerCase())
+    u?.username?.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -127,8 +127,10 @@ function RightSlidePanel({ title, users, onClose }) {
                     <small className="text-secondary">@{u.username}</small>
                   </div>
                 </div>
-
-                <button className="btn btn-light btn-sm">
+                <button
+                  className="btn btn-light btn-sm"
+                  onClick={() => handleFollowAction(u._id)}
+                >
                   {title === "Followers" ? "Remove" : "Following"}
                 </button>
               </div>
@@ -268,6 +270,20 @@ export default function Profile() {
     if (res.data?.length) {
       setStories(res.data);
       setShowStory(true);
+    }
+  };
+
+  const handleFollowAction = async (userId) => {
+    try {
+      await axios.post(
+        `${API_URL}/api/users/${userId}/follow`,
+        {},
+        { withCredentials: true },
+      );
+
+      window.location.reload();
+    } catch (err) {
+      console.error("Follow action failed", err);
     }
   };
 
