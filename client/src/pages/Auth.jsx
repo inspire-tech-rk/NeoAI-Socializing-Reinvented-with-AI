@@ -53,10 +53,8 @@ export default function Auth() {
   const validate = () => {
     const err = {};
 
-    if (!isLogin) {
-      if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) {
-        err.username = "Username must be 3-20 characters";
-      }
+    if (!isLogin && !/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) {
+      err.username = "Username must be 3-20 characters";
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -119,115 +117,219 @@ export default function Auth() {
 
   return (
     <div
-      className="min-vh-100 d-flex justify-content-center align-items-center"
+      className="min-vh-100 d-flex justify-content-center align-items-center px-3"
       style={{
         background:
-          "linear-gradient(135deg, #0f1115, #141824, #000000)",
+          "radial-gradient(circle at top left, #2563eb55, transparent 30%), radial-gradient(circle at bottom right, #d946ef44, transparent 30%), linear-gradient(135deg, #050816, #0f172a, #020617)",
+        overflow: "hidden",
       }}
     >
       <div
-        className="card border-0 shadow-lg rounded-4 p-4"
-        style={{ width: 430 }}
+        className="position-absolute"
+        style={{
+          width: 260,
+          height: 260,
+          borderRadius: "50%",
+          background: "rgba(59,130,246,0.25)",
+          filter: "blur(30px)",
+          top: "12%",
+          left: "18%",
+        }}
+      />
+
+      <div
+        className="position-absolute"
+        style={{
+          width: 300,
+          height: 300,
+          borderRadius: "50%",
+          background: "rgba(236,72,153,0.2)",
+          filter: "blur(35px)",
+          bottom: "10%",
+          right: "18%",
+        }}
+      />
+
+      <div
+        className="row shadow-lg rounded-5 overflow-hidden position-relative"
+        style={{
+          maxWidth: 960,
+          width: "100%",
+          minHeight: 590,
+          background: "rgba(255,255,255,0.08)",
+          backdropFilter: "blur(18px)",
+          border: "1px solid rgba(255,255,255,0.18)",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
+        }}
       >
-        <div className="text-center mb-4">
-          <h2 className="fw-bold mb-1">NeoAI</h2>
-          <p className="text-secondary mb-0">
-            {isLogin ? "Login to continue" : "Create your account"}
-          </p>
-        </div>
-
-        <div className="mb-3 d-flex justify-content-center">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => alert("Google login failed")}
-            width="360"
-          />
-        </div>
-
-        <div className="d-flex align-items-center my-3">
-          <hr className="flex-grow-1" />
-          <span className="px-2 text-secondary small">OR</span>
-          <hr className="flex-grow-1" />
-        </div>
-
-        <form onSubmit={handleSubmit} noValidate>
-          {!isLogin && (
-            <>
-              <input
-                className="form-control form-control-lg mb-1"
-                name="username"
-                placeholder="Username"
-                onChange={handleChange}
-              />
-              {errors.username && (
-                <small className="text-danger">{errors.username}</small>
-              )}
-
-              <input
-                type="file"
-                className="form-control mt-2 mb-1"
-                name="dp"
-                onChange={handleChange}
-                accept="image/*"
-              />
-              <small className="text-muted">Profile image optional</small>
-            </>
-          )}
-
-          <input
-            className="form-control form-control-lg mt-2 mb-1"
-            name="email"
-            type="email"
-            placeholder="Email"
-            onChange={handleChange}
-          />
-          {errors.email && (
-            <small className="text-danger">{errors.email}</small>
-          )}
-
-          <input
-            className="form-control form-control-lg mt-2 mb-1"
-            name="password"
-            type="password"
-            placeholder="Password"
-            onChange={handleChange}
-          />
-          {errors.password && (
-            <small className="text-danger">{errors.password}</small>
-          )}
-
-          {!isLogin && (
-            <>
-              <input
-                className="form-control form-control-lg mt-2 mb-1"
-                name="confirmPassword"
-                type="password"
-                placeholder="Confirm Password"
-                onChange={handleChange}
-              />
-              {errors.confirmPassword && (
-                <small className="text-danger">
-                  {errors.confirmPassword}
-                </small>
-              )}
-            </>
-          )}
-
-          <button className="btn btn-primary btn-lg w-100 mt-3 rounded-3">
-            {isLogin ? "Login" : "Register"}
-          </button>
-        </form>
-
-        <p
-          className="text-center mt-4 text-primary fw-semibold"
-          style={{ cursor: "pointer" }}
-          onClick={() => {
-            setIsLogin(!isLogin);
-            setErrors({});
+        <div
+          className="col-lg-6 d-none d-lg-flex flex-column justify-content-between p-5 text-white"
+          style={{
+            background:
+              "linear-gradient(145deg, rgba(37,99,235,0.55), rgba(147,51,234,0.35))",
           }}
         >
-          {isLogin ? "Create account" : "Already have an account?"}
-        </p>
+          <div>
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center mb-4"
+              style={{
+                width: 70,
+                height: 70,
+                background: "rgba(255,255,255,0.16)",
+                boxShadow: "inset 0 0 20px rgba(255,255,255,0.18)",
+              }}
+            >
+              <span style={{ fontSize: 34 }}>🧠</span>
+            </div>
+
+            <h1 className="fw-bold display-6 mb-3">Welcome to NeoAI</h1>
+            <p className="fs-5 text-white-50">
+              Socializing reinvented with AI, reels, stories, smart feed and
+              real-time interaction.
+            </p>
+          </div>
+
+          <div className="row g-3">
+            <div className="col-6">
+              <div className="p-3 rounded-4 bg-white bg-opacity-10">
+                <h5 className="mb-1">AI Chat</h5>
+                <small className="text-white-50">NexAI assistant</small>
+              </div>
+            </div>
+
+            <div className="col-6">
+              <div className="p-3 rounded-4 bg-white bg-opacity-10">
+                <h5 className="mb-1">Reels</h5>
+                <small className="text-white-50">Smart recommendations</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-6 p-4 p-md-5 d-flex align-items-center">
+          <div
+            className="w-100 rounded-5 p-4"
+            style={{
+              background: "rgba(255,255,255,0.9)",
+              boxShadow: "0 20px 45px rgba(0,0,0,0.25)",
+              transform: "perspective(1000px) rotateY(-2deg)",
+            }}
+          >
+            <div className="text-center mb-4">
+              <h2 className="fw-bold mb-1 text-dark">
+                {isLogin ? "Login" : "Create Account"}
+              </h2>
+              <p className="text-secondary mb-0">
+                {isLogin
+                  ? "Continue your NeoAI journey"
+                  : "Join NeoAI in seconds"}
+              </p>
+            </div>
+
+            <div className="d-flex justify-content-center mb-3">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => alert("Google login failed")}
+                width="340"
+              />
+            </div>
+
+            <div className="d-flex align-items-center my-4">
+              <hr className="flex-grow-1" />
+              <span className="px-3 text-secondary small fw-semibold">OR</span>
+              <hr className="flex-grow-1" />
+            </div>
+
+            <form onSubmit={handleSubmit} noValidate>
+              {!isLogin && (
+                <>
+                  <input
+                    className="form-control form-control-lg mb-1 rounded-4"
+                    name="username"
+                    placeholder="Username"
+                    onChange={handleChange}
+                  />
+                  {errors.username && (
+                    <small className="text-danger">{errors.username}</small>
+                  )}
+
+                  <input
+                    type="file"
+                    className="form-control mt-3 mb-1 rounded-4"
+                    name="dp"
+                    onChange={handleChange}
+                    accept="image/*"
+                  />
+                  <small className="text-muted">Profile image optional</small>
+                </>
+              )}
+
+              <input
+                className="form-control form-control-lg mt-3 mb-1 rounded-4"
+                name="email"
+                type="email"
+                placeholder="Email address"
+                onChange={handleChange}
+              />
+              {errors.email && (
+                <small className="text-danger">{errors.email}</small>
+              )}
+
+              <input
+                className="form-control form-control-lg mt-3 mb-1 rounded-4"
+                name="password"
+                type="password"
+                placeholder="Password"
+                onChange={handleChange}
+              />
+              {errors.password && (
+                <small className="text-danger">{errors.password}</small>
+              )}
+
+              {!isLogin && (
+                <>
+                  <input
+                    className="form-control form-control-lg mt-3 mb-1 rounded-4"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm Password"
+                    onChange={handleChange}
+                  />
+                  {errors.confirmPassword && (
+                    <small className="text-danger">
+                      {errors.confirmPassword}
+                    </small>
+                  )}
+                </>
+              )}
+
+              <button
+                className="btn btn-primary btn-lg w-100 mt-4 rounded-4 fw-semibold"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #2563eb, #7c3aed)",
+                  border: "none",
+                  boxShadow: "0 12px 25px rgba(37,99,235,0.35)",
+                }}
+              >
+                {isLogin ? "Login" : "Register"}
+              </button>
+            </form>
+
+            <p
+              className="text-center mt-4 text-primary fw-semibold mb-0"
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setErrors({});
+              }}
+            >
+              {isLogin
+                ? "New to NeoAI? Create account"
+                : "Already have an account? Login"}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
