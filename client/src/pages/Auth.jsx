@@ -19,8 +19,6 @@ export default function Auth() {
     setForm({ ...form, [name]: files ? files[0] : value });
   };
 
-  // ---------------- VALIDATION ----------------
-
   const validate = () => {
     const err = {};
 
@@ -31,9 +29,7 @@ export default function Auth() {
       }
     }
 
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-    ) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       err.email = "Invalid email format";
     }
 
@@ -54,8 +50,6 @@ export default function Auth() {
     return Object.keys(err).length === 0;
   };
 
-  // ---------------- SUBMIT ----------------
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -68,7 +62,7 @@ export default function Auth() {
         data.append("email", form.email);
         data.append("password", form.password);
 
-        if (form.dp) data.append("dp", form.dp); // OPTIONAL
+        if (form.dp) data.append("dp", form.dp);
 
         await axios.post(`${API_URL}/api/auth/register`, data, {
           withCredentials: true,
@@ -79,35 +73,43 @@ export default function Auth() {
         return;
       }
 
-// LOGIN
-const res = await axios.post(
-  `${API_URL}/api/auth/login`,
-  {
-    email: form.email,
-    password: form.password,
-  },
-  { withCredentials: true }
-);
+      // LOGIN
+      const res = await axios.post(
+        `${API_URL}/api/auth/login`,
+        {
+          email: form.email,
+          password: form.password,
+        },
+        { withCredentials: true }
+      );
 
-// ✅ SAVE USER IN LOCALSTORAGE
-localStorage.setItem(
-  "user",
-  JSON.stringify(res.data.user)
-);
+      // SAVE CURRENT USER
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
-// ✅ OPTIONAL TOKEN SAVE
-localStorage.setItem(
-  "token",
-  res.data.token
-);
+      // SAVE TOKEN
+      localStorage.setItem("token", res.data.token);
 
-window.location.href = "/";
+      // SAVE ACCOUNT FOR SWITCH ACCOUNT FEATURE
+      const savedAccounts =
+        JSON.parse(localStorage.getItem("savedAccounts")) || [];
+
+      const exists = savedAccounts.some(
+        (acc) => acc._id === res.data.user._id
+      );
+
+      if (!exists) {
+        savedAccounts.push(res.data.user);
+        localStorage.setItem(
+          "savedAccounts",
+          JSON.stringify(savedAccounts)
+        );
+      }
+
+      window.location.href = "/";
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
     }
   };
-
-  // ---------------- UI ----------------
 
   return (
     <div className="container vh-100 d-flex justify-content-center align-items-center">
