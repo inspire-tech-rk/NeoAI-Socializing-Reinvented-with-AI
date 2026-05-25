@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { GoogleLogin } from "@react-oauth/google";
 import { API_URL } from "../config";
 
 export default function Auth() {
@@ -14,6 +15,36 @@ export default function Auth() {
     dp: null,
   });
 
+  const saveAccount = (user, token) => {
+    localStorage.setItem("user", JSON.stringify(user));
+    if (token) localStorage.setItem("token", token);
+
+    const savedAccounts =
+      JSON.parse(localStorage.getItem("savedAccounts")) || [];
+
+    const exists = savedAccounts.some((acc) => acc._id === user._id);
+
+    if (!exists) {
+      savedAccounts.push(user);
+      localStorage.setItem("savedAccounts", JSON.stringify(savedAccounts));
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        `${API_URL}/api/auth/google`,
+        { credential: credentialResponse.credential },
+        { withCredentials: true }
+      );
+
+      saveAccount(res.data.user, res.data.token);
+      window.location.href = "/";
+    } catch (err) {
+      alert(err.response?.data?.message || "Google login failed");
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     setForm({ ...form, [name]: files ? files[0] : value });
@@ -24,8 +55,7 @@ export default function Auth() {
 
     if (!isLogin) {
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) {
-        err.username =
-          "Username must be 3-20 characters and contain only letters, numbers & _";
+        err.username = "Username must be 3-20 characters";
       }
     }
 
@@ -52,7 +82,6 @@ export default function Auth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validate()) return;
 
     try {
@@ -61,7 +90,6 @@ export default function Auth() {
         data.append("username", form.username);
         data.append("email", form.email);
         data.append("password", form.password);
-
         if (form.dp) data.append("dp", form.dp);
 
         await axios.post(`${API_URL}/api/auth/register`, data, {
@@ -73,7 +101,6 @@ export default function Auth() {
         return;
       }
 
-      // LOGIN
       const res = await axios.post(
         `${API_URL}/api/auth/login`,
         {
@@ -83,28 +110,7 @@ export default function Auth() {
         { withCredentials: true }
       );
 
-      // SAVE CURRENT USER
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      // SAVE TOKEN
-      localStorage.setItem("token", res.data.token);
-
-      // SAVE ACCOUNT FOR SWITCH ACCOUNT FEATURE
-      const savedAccounts =
-        JSON.parse(localStorage.getItem("savedAccounts")) || [];
-
-      const exists = savedAccounts.some(
-        (acc) => acc._id === res.data.user._id
-      );
-
-      if (!exists) {
-        savedAccounts.push(res.data.user);
-        localStorage.setItem(
-          "savedAccounts",
-          JSON.stringify(savedAccounts)
-        );
-      }
-
+      saveAccount(res.data.user, res.data.token);
       window.location.href = "/";
     } catch (err) {
       alert(err.response?.data?.message || "Server error");
@@ -112,21 +118,46 @@ export default function Auth() {
   };
 
   return (
-    <div className="container vh-100 d-flex justify-content-center align-items-center">
-      <div className="card p-4 shadow" style={{ width: "400px" }}>
-        <h3 className="text-center mb-3">
-          {isLogin ? "Login" : "Register"}
-        </h3>
+    <div
+      className="min-vh-100 d-flex justify-content-center align-items-center"
+      style={{
+        background:
+          "linear-gradient(135deg, #0f1115, #141824, #000000)",
+      }}
+    >
+      <div
+        className="card border-0 shadow-lg rounded-4 p-4"
+        style={{ width: 430 }}
+      >
+        <div className="text-center mb-4">
+          <h2 className="fw-bold mb-1">NeoAI</h2>
+          <p className="text-secondary mb-0">
+            {isLogin ? "Login to continue" : "Create your account"}
+          </p>
+        </div>
+
+        <div className="mb-3 d-flex justify-content-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => alert("Google login failed")}
+            width="360"
+          />
+        </div>
+
+        <div className="d-flex align-items-center my-3">
+          <hr className="flex-grow-1" />
+          <span className="px-2 text-secondary small">OR</span>
+          <hr className="flex-grow-1" />
+        </div>
 
         <form onSubmit={handleSubmit} noValidate>
           {!isLogin && (
             <>
               <input
-                className="form-control mb-1"
+                className="form-control form-control-lg mb-1"
                 name="username"
                 placeholder="Username"
                 onChange={handleChange}
-                required
               />
               {errors.username && (
                 <small className="text-danger">{errors.username}</small>
@@ -134,36 +165,32 @@ export default function Auth() {
 
               <input
                 type="file"
-                className="form-control mt-2 mb-2"
+                className="form-control mt-2 mb-1"
                 name="dp"
                 onChange={handleChange}
                 accept="image/*"
               />
-              <small className="text-muted">
-                Profile image optional
-              </small>
+              <small className="text-muted">Profile image optional</small>
             </>
           )}
 
           <input
-            className="form-control mt-2 mb-1"
+            className="form-control form-control-lg mt-2 mb-1"
             name="email"
             type="email"
             placeholder="Email"
             onChange={handleChange}
-            required
           />
           {errors.email && (
             <small className="text-danger">{errors.email}</small>
           )}
 
           <input
-            className="form-control mt-2 mb-1"
+            className="form-control form-control-lg mt-2 mb-1"
             name="password"
             type="password"
             placeholder="Password"
             onChange={handleChange}
-            required
           />
           {errors.password && (
             <small className="text-danger">{errors.password}</small>
@@ -172,12 +199,11 @@ export default function Auth() {
           {!isLogin && (
             <>
               <input
-                className="form-control mt-2 mb-1"
+                className="form-control form-control-lg mt-2 mb-1"
                 name="confirmPassword"
                 type="password"
                 placeholder="Confirm Password"
                 onChange={handleChange}
-                required
               />
               {errors.confirmPassword && (
                 <small className="text-danger">
@@ -187,13 +213,13 @@ export default function Auth() {
             </>
           )}
 
-          <button className="btn btn-primary w-100 mt-3">
+          <button className="btn btn-primary btn-lg w-100 mt-3 rounded-3">
             {isLogin ? "Login" : "Register"}
           </button>
         </form>
 
         <p
-          className="text-center mt-3 text-primary"
+          className="text-center mt-4 text-primary fw-semibold"
           style={{ cursor: "pointer" }}
           onClick={() => {
             setIsLogin(!isLogin);

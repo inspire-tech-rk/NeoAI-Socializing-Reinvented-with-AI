@@ -1,6 +1,9 @@
 import User from "../models/Auth.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /* -------------------- REGISTER -------------------- */
 
@@ -24,7 +27,7 @@ export const register = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+    await User.create({
       username,
       email,
       password: hashed,
@@ -71,21 +74,19 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate JWT Token
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
       {
         expiresIn: "7d",
-      },
+      }
     );
 
-    // Save token in secure cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
@@ -103,6 +104,79 @@ export const login = async (req, res) => {
 
     res.status(500).json({
       message: "Login failed",
+    });
+  }
+};
+
+/* -------------------- GOOGLE LOGIN -------------------- */
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        message: "Google credential required",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    const email = payload.email;
+    const name = payload.name;
+    const picture = payload.picture;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const username =
+        name?.replace(/\s+/g, "_").replace(/[^\w]/g, "").toLowerCase() ||
+        email.split("@")[0];
+
+      user = await User.create({
+        username,
+        email,
+        password: "GOOGLE_AUTH_USER",
+        dp: picture || "",
+        googleId: payload.sub,
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      message: "Google login successful",
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        dp: user.dp,
+      },
+    });
+  } catch (err) {
+    console.error("Google Login Error:", err);
+
+    res.status(500).json({
+      message: "Google login failed",
     });
   }
 };
@@ -143,6 +217,8 @@ export const logout = async (req, res) => {
   }
 };
 
+/* -------------------- SWITCH ACCOUNT -------------------- */
+
 export const switchAccount = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -150,28 +226,36 @@ export const switchAccount = async (req, res) => {
     const user = await User.findById(userId).select("-password");
 
     if (!user) {
-      return res.status(404).json({ message: "Account not found" });
+      return res.status(404).json({
+        message: "Account not found",
+      });
     }
 
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d",
+      }
     );
 
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
-      sameSite: "none",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
       message: "Switched successfully",
+      token,
       user,
     });
   } catch (err) {
     console.error("Switch account error:", err);
-    res.status(500).json({ message: "Switch account failed" });
+
+    res.status(500).json({
+      message: "Switch account failed",
+    });
   }
 };
