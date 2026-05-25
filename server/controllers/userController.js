@@ -71,7 +71,7 @@ export const getSuggestions = async (req, res) => {
     const currentUser = await User.findById(currentUserId).select("following");
 
     const followingIds = (currentUser.following || []).map((id) =>
-      id.toString()
+      id.toString(),
     );
 
     const excludeIds = [currentUserId.toString(), ...followingIds];
@@ -85,7 +85,7 @@ export const getSuggestions = async (req, res) => {
 
     const suggestions = users.map((user) => {
       const mutualFollowers = user.followers.filter((follower) =>
-        followingIds.includes(follower._id.toString())
+        followingIds.includes(follower._id.toString()),
       );
 
       const mutualNames = mutualFollowers.map((f) => f.username);
@@ -222,5 +222,30 @@ export const getChatUsers = async (req, res) => {
     res.status(200).json(mutualUsers);
   } catch (err) {
     res.status(500).json(err);
+  }
+};
+
+export const removeFollower = async (req, res) => {
+  try {
+    const currentUserId = req.user._id;
+    const followerId = req.params.userId;
+
+    const currentUser = await User.findById(currentUserId);
+    const followerUser = await User.findById(followerId);
+
+    if (!currentUser || !followerUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    currentUser.followers.pull(followerId);
+    followerUser.following.pull(currentUserId);
+
+    await currentUser.save();
+    await followerUser.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Remove follower error:", err);
+    res.status(500).json({ message: "Remove follower failed" });
   }
 };

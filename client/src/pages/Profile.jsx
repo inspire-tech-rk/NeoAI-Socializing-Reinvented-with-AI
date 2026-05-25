@@ -64,12 +64,41 @@ function PostCard({ post, onDelete, onSelect }) {
 }
 
 // ---------------- RightSlidePanel Component ----------------
-function RightSlidePanel({ title, users, onClose }) {
+function RightSlidePanel({ title, users, onClose, onUserRemoved }) {
   const [search, setSearch] = useState("");
+  const [localUsers, setLocalUsers] = useState(users || []);
 
-  const filteredUsers = (users || []).filter((u) =>
+  useEffect(() => {
+    setLocalUsers(users || []);
+  }, [users]);
+
+  const filteredUsers = localUsers.filter((u) =>
     u?.username?.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const handleAction = async (targetUserId) => {
+    try {
+      if (title === "Following") {
+        await axios.post(
+          `${API_URL}/api/users/${targetUserId}/follow`,
+          {},
+          { withCredentials: true },
+        );
+      } else {
+        await axios.post(
+          `${API_URL}/api/users/${targetUserId}/remove-follower`,
+          {},
+          { withCredentials: true },
+        );
+      }
+
+      setLocalUsers((prev) => prev.filter((u) => u._id !== targetUserId));
+      onUserRemoved?.(title, targetUserId);
+    } catch (err) {
+      console.error("Follow/remove action failed", err);
+      alert("Action failed");
+    }
+  };
 
   return (
     <>
@@ -127,9 +156,10 @@ function RightSlidePanel({ title, users, onClose }) {
                     <small className="text-secondary">@{u.username}</small>
                   </div>
                 </div>
+
                 <button
                   className="btn btn-light btn-sm"
-                  onClick={() => handleFollowAction(u._id)}
+                  onClick={() => handleAction(u._id)}
                 >
                   {title === "Followers" ? "Remove" : "Following"}
                 </button>
@@ -287,6 +317,24 @@ export default function Profile() {
     }
   };
 
+  const handleUserRemovedFromList = (type, userId) => {
+    setProfileUser((prev) => {
+      if (!prev) return prev;
+
+      if (type === "Followers") {
+        return {
+          ...prev,
+          followers: prev.followers.filter((u) => u._id !== userId),
+        };
+      }
+
+      return {
+        ...prev,
+        following: prev.following.filter((u) => u._id !== userId),
+      };
+    });
+  };
+
   return (
     <div
       className="container-fluid"
@@ -434,6 +482,7 @@ export default function Profile() {
           title="Followers"
           users={profileUser.followers || []}
           onClose={() => setShowFollowersModal(false)}
+          onUserRemoved={handleUserRemovedFromList}
         />
       )}
 
@@ -442,6 +491,7 @@ export default function Profile() {
           title="Following"
           users={profileUser.following || []}
           onClose={() => setShowFollowingModal(false)}
+          onUserRemoved={handleUserRemovedFromList}
         />
       )}
     </div>

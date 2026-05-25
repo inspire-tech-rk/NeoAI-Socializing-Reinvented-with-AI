@@ -4,7 +4,7 @@ import {
   getSuggestions,
   toggleFollow,
   getChatUsers,
-
+  removeFollower,
 } from "../controllers/userController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -22,7 +22,7 @@ router.get("/suggestions", protect, getSuggestions);
 /* -------------------- FOLLOW / UNFOLLOW -------------------- */
 router.post("/:userId/follow", protect, toggleFollow);
 
-
+router.post("/:userId/remove-follower", protect, removeFollower);
 
 /* -------------------- PROFILE -------------------- */
 router.get("/:userId", protect, getUserProfile);
