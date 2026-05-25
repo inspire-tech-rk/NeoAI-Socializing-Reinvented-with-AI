@@ -7,24 +7,27 @@ export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
       .select("-password")
-      .populate("followers", "username dp")
-      .populate("following", "username dp");
+      .populate("followers", "_id username dp")
+      .populate("following", "_id username dp")
+      .lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const formatUser = (u) => ({
-      ...u._doc,
-     dp: u.dp || "",
-    });
-
-    user.followers = user.followers.map(formatUser);
-    user.following = user.following.map(formatUser);
-
     res.json({
-      ...user._doc,
-     dp: user.dp || "",
+      ...user,
+      dp: user.dp || "",
+      followers: (user.followers || []).map((u) => ({
+        _id: u._id,
+        username: u.username,
+        dp: u.dp || "",
+      })),
+      following: (user.following || []).map((u) => ({
+        _id: u._id,
+        username: u.username,
+        dp: u.dp || "",
+      })),
     });
   } catch (err) {
     console.error("Get profile error:", err);

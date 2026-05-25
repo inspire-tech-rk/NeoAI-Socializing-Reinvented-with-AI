@@ -65,35 +65,72 @@ const isVideo =
 
 // ---------------- RightSlidePanel Component ----------------
 function RightSlidePanel({ title, users, onClose }) {
+  const [search, setSearch] = useState("");
+
+  const filteredUsers = (users || []).filter((u) =>
+    u?.username?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <>
       <div className="right-panel-backdrop" onClick={onClose} />
 
-      <div className="right-panel open">
-        <div className="right-panel-header">
-          <span>{title}</span>
+      <div
+        className="position-fixed top-0 end-0 h-100 bg-white shadow"
+        style={{
+          width: "390px",
+          zIndex: 3000,
+          overflowY: "auto",
+        }}
+      >
+        <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
+          <h5 className="m-0">{title}</h5>
           <i
-            className="bi bi-x"
+            className="bi bi-x-lg"
             style={{ cursor: "pointer", fontSize: 22 }}
             onClick={onClose}
           />
         </div>
 
-        <div className="right-panel-body">
-          {users.length === 0 ? (
+        <div className="p-3">
+          <input
+            className="form-control mb-3"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          {filteredUsers.length === 0 ? (
             <p className="text-secondary text-center mt-3">No users</p>
           ) : (
-            users.map((u) => (
-              <div key={u._id} className="user-row">
-                <img
-                  src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
-                  onError={(e) => (e.target.src = "/default-dp.png")}
-                  className="rounded-circle"
-                  width={36}
-                  height={36}
-                  alt=""
-                />
-                <span>{u.username}</span>
+            filteredUsers.map((u) => (
+              <div
+                key={u._id}
+                className="d-flex align-items-center justify-content-between mb-3"
+              >
+                <div className="d-flex align-items-center gap-3">
+                  <img
+                    src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
+                    onError={(e) => (e.target.src = "/default-dp.png")}
+                    className="rounded-circle"
+                    width={52}
+                    height={52}
+                    alt=""
+                    style={{
+                      objectFit: "cover",
+                      border: "1px solid #ddd",
+                    }}
+                  />
+
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{u.username}</div>
+                    <small className="text-secondary">@{u.username}</small>
+                  </div>
+                </div>
+
+                <button className="btn btn-light btn-sm">
+                  {title === "Followers" ? "Remove" : "Following"}
+                </button>
               </div>
             ))
           )}
