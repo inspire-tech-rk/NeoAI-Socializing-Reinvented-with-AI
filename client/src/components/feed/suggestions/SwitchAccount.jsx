@@ -21,10 +21,33 @@ export default function SwitchAccount() {
     (acc) => acc._id !== loggedUser?._id
   );
 
-  const switchToAccount = (account) => {
-    localStorage.setItem("user", JSON.stringify(account));
+ const switchToAccount = async (account) => {
+  try {
+    const res = await fetch(`${API_URL}/api/auth/switch`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: account._id,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "Switch failed");
+      return;
+    }
+
+    localStorage.setItem("user", JSON.stringify(data.user));
     window.location.href = "/";
-  };
+  } catch (err) {
+    console.error("Switch failed", err);
+    alert("Switch failed");
+  }
+};
 
   if (!loggedUser) return null;
 

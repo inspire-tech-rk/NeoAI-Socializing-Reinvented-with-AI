@@ -4,6 +4,7 @@ import {
   login,
   logout,
   me,
+  switchAccount,
 } from "../controllers/authController.js";
 import upload from "../middleware/uploadMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
@@ -18,6 +19,7 @@ router.post("/login", login);
 
 // LOGOUT
 router.post("/logout", protect, logout);
+router.post("/switch", switchAccount);
 
 // CURRENT USER
 router.get("/me", protect, me);

@@ -142,3 +142,36 @@ export const logout = async (req, res) => {
     });
   }
 };
+
+export const switchAccount = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      message: "Switched successfully",
+      user,
+    });
+  } catch (err) {
+    console.error("Switch account error:", err);
+    res.status(500).json({ message: "Switch account failed" });
+  }
+};
