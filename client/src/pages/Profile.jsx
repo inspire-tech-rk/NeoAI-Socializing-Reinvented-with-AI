@@ -5,7 +5,8 @@ import PostPreviewModal from "../components/post/PostPreviewModal";
 import axios from "axios";
 import { API_URL } from "../config";
 import HighlightsBar from "../components/highlights/HighlightsBar";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import StoryRing from "../components/story/StoryRing";
 import StoryViewer from "../components/story/StoryViewer";
 
 const getMediaUrl = (file) => {
@@ -63,26 +64,20 @@ function PostCard({ post, onDelete, onSelect }) {
 }
 
 // ---------------- RightSlidePanel Component ----------------
-function RightSlidePanel({
-  title,
-  users,
-  onClose,
-  onUserRemoved,
-  onUserClick,
-}) {
+function RightSlidePanel({ title, users, onClose, onUserRemoved }) {
   const [search, setSearch] = useState("");
   const [localUsers, setLocalUsers] = useState(
-    (users || []).map((u) => ({ ...u, followStatus: "following" }))
+    (users || []).map((u) => ({ ...u, followStatus: "following" })),
   );
 
   useEffect(() => {
     setLocalUsers(
-      (users || []).map((u) => ({ ...u, followStatus: "following" }))
+      (users || []).map((u) => ({ ...u, followStatus: "following" })),
     );
   }, [users]);
 
   const filteredUsers = localUsers.filter((u) =>
-    u?.username?.toLowerCase().includes(search.toLowerCase())
+    u?.username?.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleAction = async (targetUserId) => {
@@ -91,7 +86,7 @@ function RightSlidePanel({
         await axios.post(
           `${API_URL}/api/users/${targetUserId}/follow`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         setLocalUsers((prev) =>
@@ -102,8 +97,8 @@ function RightSlidePanel({
                   followStatus:
                     u.followStatus === "following" ? "follow" : "following",
                 }
-              : u
-          )
+              : u,
+          ),
         );
 
         onUserRemoved?.(title, targetUserId);
@@ -111,7 +106,7 @@ function RightSlidePanel({
         await axios.post(
           `${API_URL}/api/users/${targetUserId}/remove-follower`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         setLocalUsers((prev) => prev.filter((u) => u._id !== targetUserId));
@@ -160,11 +155,7 @@ function RightSlidePanel({
                 key={u._id}
                 className="d-flex align-items-center justify-content-between mb-3"
               >
-                <div
-                  className="d-flex align-items-center gap-3"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => onUserClick(u._id)}
-                >
+                <div className="d-flex align-items-center gap-3">
                   <img
                     src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
                     onError={(e) => (e.target.src = "/default-dp.png")}
@@ -186,16 +177,13 @@ function RightSlidePanel({
 
                 <button
                   className="btn btn-light btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAction(u._id);
-                  }}
+                  onClick={() => handleAction(u._id)}
                 >
                   {title === "Followers"
                     ? "Remove"
                     : u.followStatus === "following"
-                    ? "Following"
-                    : "Follow"}
+                      ? "Following"
+                      : "Follow"}
                 </button>
               </div>
             ))
@@ -221,8 +209,8 @@ export default function Profile() {
   const [isFollowing, setIsFollowing] = useState(false);
 
   const { userId } = useParams();
-  const navigate = useNavigate();
 
+  // ---------------- PROFILE LOAD ----------------
   useEffect(() => {
     if (!loggedInUser) return;
 
@@ -243,17 +231,19 @@ export default function Profile() {
     fetchUserProfile();
   }, [userId, loggedInUser]);
 
+  // ---------------- CHECK FOLLOW STATUS ----------------
   useEffect(() => {
     if (!loggedInUser || !profileUser) return;
 
     const followingIds =
       loggedInUser.following?.map((id) =>
-        typeof id === "object" ? id._id : id
+        typeof id === "object" ? id._id : id,
       ) || [];
 
     setIsFollowing(followingIds.includes(profileUser._id));
   }, [loggedInUser, profileUser]);
 
+  // ---------------- LOAD POSTS ----------------
   useEffect(() => {
     if (!profileUser?._id) return;
 
@@ -263,7 +253,7 @@ export default function Profile() {
           `${API_URL}/api/posts/user/${profileUser._id}`,
           {
             withCredentials: true,
-          }
+          },
         );
         setProfilePosts(res.data);
       } catch (err) {
@@ -274,6 +264,7 @@ export default function Profile() {
     loadPosts();
   }, [profileUser]);
 
+  // ---------------- STORY CHECK ----------------
   useEffect(() => {
     if (!profileUser) return;
 
@@ -285,6 +276,7 @@ export default function Profile() {
       .catch((err) => console.error("Story check failed:", err));
   }, [profileUser]);
 
+  // ---------------- NEW POST LISTENER ----------------
   useEffect(() => {
     const handler = (e) => {
       const newPost = e.detail;
@@ -298,6 +290,7 @@ export default function Profile() {
     return () => window.removeEventListener("new-post-created", handler);
   }, [profileUser]);
 
+  // ---------------- DELETE POST ----------------
   const handleDelete = async (postId) => {
     if (!window.confirm("Delete this post?")) return;
 
@@ -308,6 +301,17 @@ export default function Profile() {
     setProfilePosts((prev) => prev.filter((p) => p._id !== postId));
   };
 
+  // ---------------- LOADING STATE ----------------
+  if (loading || !profileUser)
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-light" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+
+  // ---------------- STORY OPEN ----------------
   const openStory = async () => {
     if (stories.length) return setShowStory(true);
 
@@ -318,6 +322,20 @@ export default function Profile() {
     if (res.data?.length) {
       setStories(res.data);
       setShowStory(true);
+    }
+  };
+
+  const handleFollowAction = async (userId) => {
+    try {
+      await axios.post(
+        `${API_URL}/api/users/${userId}/follow`,
+        {},
+        { withCredentials: true },
+      );
+
+      window.location.reload();
+    } catch (err) {
+      console.error("Follow action failed", err);
     }
   };
 
@@ -336,21 +354,6 @@ export default function Profile() {
     });
   };
 
-  const openUserProfile = (id) => {
-    setShowFollowersModal(false);
-    setShowFollowingModal(false);
-    navigate(`/profile/${id}`);
-  };
-
-  if (loading || !profileUser)
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-light" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-
   return (
     <div
       className="container-fluid"
@@ -361,6 +364,7 @@ export default function Profile() {
       }}
     >
       <div className="row gx-4">
+        {/* ---------------- POSTS CENTER ---------------- */}
         <div className="col-12 col-lg-9 col-xl-8">
           <div
             className="card rounded-4 p-3 posts-container"
@@ -381,11 +385,13 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* ---------------- PROFILE SIDEBAR ---------------- */}
         <div className="col-12 col-lg-7 col-xl-4">
           <div
             className="card bg-dark text-white rounded-4 p-4 text-center sidebar"
             style={{ position: "sticky", top: "20px" }}
           >
+            {/* PROFILE DP */}
             <div onClick={openStory} style={{ cursor: "pointer" }}>
               <img
                 src={
@@ -412,6 +418,7 @@ export default function Profile() {
             <h5 className="mt-3">@{profileUser.username}</h5>
             <br />
 
+            {/* FOLLOW BUTTON */}
             {loggedInUser._id !== profileUser._id && (
               <button
                 className="btn btn-primary btn-sm mt-2"
@@ -420,7 +427,7 @@ export default function Profile() {
                     const res = await axios.post(
                       `${API_URL}/api/users/${profileUser._id}/follow`,
                       {},
-                      { withCredentials: true }
+                      { withCredentials: true },
                     );
 
                     if (res.data.requested) {
@@ -437,6 +444,7 @@ export default function Profile() {
               </button>
             )}
 
+            {/* ---------------- FOLLOW STATS ---------------- */}
             <div className="d-flex justify-content-around my-3">
               <div>
                 <strong>{profilePosts.length}</strong>
@@ -467,12 +475,14 @@ export default function Profile() {
               Edit Profile
             </button>
 
+            {/* ---------------- HIGHLIGHTS ---------------- */}
             <h6 className="text-start mt-4">HIGHLIGHTS</h6>
             <HighlightsBar userId={profileUser._id} isOwnProfile />
           </div>
         </div>
       </div>
 
+      {/* ---------------- MODALS ---------------- */}
       {showStory && (
         <StoryViewer stories={stories} onClose={() => setShowStory(false)} />
       )}
@@ -492,7 +502,6 @@ export default function Profile() {
           users={profileUser.followers || []}
           onClose={() => setShowFollowersModal(false)}
           onUserRemoved={handleUserRemovedFromList}
-          onUserClick={openUserProfile}
         />
       )}
 
@@ -502,7 +511,6 @@ export default function Profile() {
           users={profileUser.following || []}
           onClose={() => setShowFollowingModal(false)}
           onUserRemoved={handleUserRemovedFromList}
-          onUserClick={openUserProfile}
         />
       )}
     </div>
