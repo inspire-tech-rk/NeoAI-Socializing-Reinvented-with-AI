@@ -5,7 +5,7 @@ import PostPreviewModal from "../components/post/PostPreviewModal";
 import axios from "axios";
 import { API_URL } from "../config";
 import HighlightsBar from "../components/highlights/HighlightsBar";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import StoryRing from "../components/story/StoryRing";
 import StoryViewer from "../components/story/StoryViewer";
 
@@ -64,13 +64,7 @@ function PostCard({ post, onDelete, onSelect }) {
 }
 
 // ---------------- RightSlidePanel Component ----------------
-function RightSlidePanel({
-  title,
-  users,
-  onClose,
-  onUserRemoved,
-  onUserClick,
-}) {
+function RightSlidePanel({ title, users, onClose, onUserRemoved }) {
   const [search, setSearch] = useState("");
   const [localUsers, setLocalUsers] = useState(
     (users || []).map((u) => ({ ...u, followStatus: "following" })),
@@ -161,11 +155,7 @@ function RightSlidePanel({
                 key={u._id}
                 className="d-flex align-items-center justify-content-between mb-3"
               >
-                <div
-                  className="d-flex align-items-center gap-3"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => onUserClick(u._id)}
-                >
+                <div className="d-flex align-items-center gap-3">
                   <img
                     src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
                     onError={(e) => (e.target.src = "/default-dp.png")}
@@ -187,10 +177,7 @@ function RightSlidePanel({
 
                 <button
                   className="btn btn-light btn-sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAction(u._id);
-                  }}
+                  onClick={() => handleAction(u._id)}
                 >
                   {title === "Followers"
                     ? "Remove"
@@ -222,7 +209,6 @@ export default function Profile() {
   const [isFollowing, setIsFollowing] = useState(false);
 
   const { userId } = useParams();
-  const navigate = useNavigate();
 
   // ---------------- PROFILE LOAD ----------------
   useEffect(() => {
@@ -368,12 +354,6 @@ export default function Profile() {
     });
   };
 
-  const openUserProfile = (id) => {
-    setShowFollowersModal(false);
-    setShowFollowingModal(false);
-    navigate(`/profile/${id}`);
-  };
-
   return (
     <div
       className="container-fluid"
@@ -516,21 +496,23 @@ export default function Profile() {
         />
       )}
 
-      <RightSlidePanel
-        title="Followers"
-        users={profileUser.followers || []}
-        onClose={() => setShowFollowersModal(false)}
-        onUserRemoved={handleUserRemovedFromList}
-        onUserClick={openUserProfile}
-      />
+      {showFollowersModal && (
+        <RightSlidePanel
+          title="Followers"
+          users={profileUser.followers || []}
+          onClose={() => setShowFollowersModal(false)}
+          onUserRemoved={handleUserRemovedFromList}
+        />
+      )}
 
-      <RightSlidePanel
-        title="Following"
-        users={profileUser.following || []}
-        onClose={() => setShowFollowingModal(false)}
-        onUserRemoved={handleUserRemovedFromList}
-        onUserClick={openUserProfile}
-      />
+      {showFollowingModal && (
+        <RightSlidePanel
+          title="Following"
+          users={profileUser.following || []}
+          onClose={() => setShowFollowingModal(false)}
+          onUserRemoved={handleUserRemovedFromList}
+        />
+      )}
     </div>
   );
 }
