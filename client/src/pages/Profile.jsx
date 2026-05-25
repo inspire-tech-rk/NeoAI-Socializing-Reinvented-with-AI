@@ -66,10 +66,14 @@ function PostCard({ post, onDelete, onSelect }) {
 // ---------------- RightSlidePanel Component ----------------
 function RightSlidePanel({ title, users, onClose, onUserRemoved }) {
   const [search, setSearch] = useState("");
-  const [localUsers, setLocalUsers] = useState(users || []);
+  const [localUsers, setLocalUsers] = useState(
+    (users || []).map((u) => ({ ...u, followStatus: "following" })),
+  );
 
   useEffect(() => {
-    setLocalUsers(users || []);
+    setLocalUsers(
+      (users || []).map((u) => ({ ...u, followStatus: "following" })),
+    );
   }, [users]);
 
   const filteredUsers = localUsers.filter((u) =>
@@ -84,16 +88,30 @@ function RightSlidePanel({ title, users, onClose, onUserRemoved }) {
           {},
           { withCredentials: true },
         );
+
+        setLocalUsers((prev) =>
+          prev.map((u) =>
+            u._id === targetUserId
+              ? {
+                  ...u,
+                  followStatus:
+                    u.followStatus === "following" ? "follow" : "following",
+                }
+              : u,
+          ),
+        );
+
+        onUserRemoved?.(title, targetUserId);
       } else {
         await axios.post(
           `${API_URL}/api/users/${targetUserId}/remove-follower`,
           {},
           { withCredentials: true },
         );
-      }
 
-      setLocalUsers((prev) => prev.filter((u) => u._id !== targetUserId));
-      onUserRemoved?.(title, targetUserId);
+        setLocalUsers((prev) => prev.filter((u) => u._id !== targetUserId));
+        onUserRemoved?.(title, targetUserId);
+      }
     } catch (err) {
       console.error("Follow/remove action failed", err);
       alert("Action failed");
@@ -161,7 +179,11 @@ function RightSlidePanel({ title, users, onClose, onUserRemoved }) {
                   className="btn btn-light btn-sm"
                   onClick={() => handleAction(u._id)}
                 >
-                  {title === "Followers" ? "Remove" : "Following"}
+                  {title === "Followers"
+                    ? "Remove"
+                    : u.followStatus === "following"
+                      ? "Following"
+                      : "Follow"}
                 </button>
               </div>
             ))
@@ -328,10 +350,7 @@ export default function Profile() {
         };
       }
 
-      return {
-        ...prev,
-        following: prev.following.filter((u) => u._id !== userId),
-      };
+      return prev;
     });
   };
 
