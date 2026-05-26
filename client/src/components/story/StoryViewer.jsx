@@ -24,6 +24,8 @@ export default function StoryViewer({
   const [likes, setLikes] = useState([]);
   const [comments, setComments] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLikesList, setShowLikesList] = useState(false);
+  const [showCommentsList, setShowCommentsList] = useState(false);
 
   const { user: loggedInUser } = useContext(AuthContext);
   const videoRef = useRef(null);
@@ -34,6 +36,8 @@ export default function StoryViewer({
 
   const nextStory = () => {
     setMenuOpen(false);
+    setShowLikesList(false);
+    setShowCommentsList(false);
     setCommentText("");
 
     if (index < stories.length - 1) setIndex(index + 1);
@@ -42,6 +46,8 @@ export default function StoryViewer({
 
   const prevStory = () => {
     setMenuOpen(false);
+    setShowLikesList(false);
+    setShowCommentsList(false);
     setCommentText("");
 
     if (index > 0) setIndex(index - 1);
@@ -69,6 +75,8 @@ export default function StoryViewer({
     setStories(initialStories);
     setIndex(0);
     setMenuOpen(false);
+    setShowLikesList(false);
+    setShowCommentsList(false);
     setCommentText("");
   }, [initialStories]);
 
@@ -79,7 +87,7 @@ export default function StoryViewer({
     setComments(story.comments || []);
 
     const alreadyLiked = story.likes?.some(
-      (u) => (u._id || u)?.toString() === loggedInUser._id.toString(),
+      (u) => (u._id || u)?.toString() === loggedInUser._id.toString()
     );
 
     setLiked(!!alreadyLiked);
@@ -89,6 +97,8 @@ export default function StoryViewer({
     if (!story) return;
 
     setMenuOpen(false);
+    setShowLikesList(false);
+    setShowCommentsList(false);
     clearInterval(intervalRef.current);
 
     if (story.type === "video" && videoRef.current) {
@@ -193,8 +203,8 @@ export default function StoryViewer({
         prev.map((s) =>
           s._id === story._id
             ? { ...s, likes: data.likes || [], comments: data.comments || [] }
-            : s,
-        ),
+            : s
+        )
       );
       setLikes(data.likes || []);
       setComments(data.comments || []);
@@ -229,8 +239,8 @@ export default function StoryViewer({
         prev.map((s) =>
           s._id === story._id
             ? { ...s, likes: data.likes || [], comments: data.comments || [] }
-            : s,
-        ),
+            : s
+        )
       );
       setCommentText("");
     } catch (err) {
@@ -524,9 +534,9 @@ export default function StoryViewer({
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: "absolute",
-                bottom: 70,
-                left: 14,
-                right: 14,
+                bottom: 72,
+                left: 18,
+                right: 18,
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -534,28 +544,38 @@ export default function StoryViewer({
                 color: "#fff",
               }}
             >
-              <div
-                style={{
-                  background: "rgba(0,0,0,0.45)",
-                  padding: "8px 12px",
-                  borderRadius: 20,
-                  fontWeight: 600,
-                }}
+              <button
+                type="button"
+                onClick={() => setShowLikesList(true)}
+                style={storyCounterBtnStyle}
               >
-                ♥ {likes.length} likes
-              </div>
+                ❤️ {likes.length}
+              </button>
 
-              <div
-                style={{
-                  background: "rgba(0,0,0,0.45)",
-                  padding: "8px 12px",
-                  borderRadius: 20,
-                  fontWeight: 600,
-                }}
+              <button
+                type="button"
+                onClick={() => setShowCommentsList(true)}
+                style={storyCounterBtnStyle}
               >
-                💬 {comments.length} comments
-              </div>
+                💬 {comments.length}
+              </button>
             </div>
+          )}
+
+          {showLikesList && (
+            <StoryOverlayList
+              title="Likes"
+              users={likes}
+              onClose={() => setShowLikesList(false)}
+            />
+          )}
+
+          {showCommentsList && (
+            <StoryOverlayList
+              title="Comments"
+              comments={comments}
+              onClose={() => setShowCommentsList(false)}
+            />
           )}
         </div>
       </div>
@@ -584,3 +604,119 @@ const menuItemStyle = {
   cursor: "pointer",
   borderBottom: "1px solid #333",
 };
+
+const storyCounterBtnStyle = {
+  background: "rgba(0,0,0,0.55)",
+  color: "#fff",
+  border: "1px solid rgba(255,255,255,0.25)",
+  borderRadius: "999px",
+  padding: "7px 14px",
+  fontSize: 16,
+  fontWeight: 700,
+  cursor: "pointer",
+  backdropFilter: "blur(8px)",
+};
+
+function StoryOverlayList({ title, users = [], comments = [], onClose }) {
+  const list = title === "Likes" ? users : comments;
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "rgba(0,0,0,0.65)",
+        zIndex: 99999,
+        display: "flex",
+        alignItems: "flex-end",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxHeight: "55%",
+          background: "#fff",
+          borderTopLeftRadius: 18,
+          borderTopRightRadius: 18,
+          overflowY: "auto",
+          paddingBottom: 12,
+        }}
+      >
+        <div
+          className="d-flex justify-content-between align-items-center"
+          style={{
+            padding: "14px 16px",
+            borderBottom: "1px solid #eee",
+          }}
+        >
+          <strong style={{ fontSize: 18 }}>{title}</strong>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: "none",
+              background: "transparent",
+              fontSize: 24,
+              cursor: "pointer",
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {list.length === 0 ? (
+          <p className="text-center text-secondary mt-3">No {title}</p>
+        ) : title === "Likes" ? (
+          users.map((u) => (
+            <div
+              key={u._id}
+              className="d-flex align-items-center gap-3"
+              style={{ padding: "10px 16px" }}
+            >
+              <img
+                src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
+                onError={(e) => {
+                  e.target.src = "/default-dp.png";
+                }}
+                width={44}
+                height={44}
+                className="rounded-circle"
+                style={{ objectFit: "cover" }}
+                alt=""
+              />
+
+              <strong>@{u.username}</strong>
+            </div>
+          ))
+        ) : (
+          comments.map((c, i) => (
+            <div
+              key={c._id || i}
+              className="d-flex align-items-start gap-3"
+              style={{ padding: "10px 16px" }}
+            >
+              <img
+                src={c.user?.dp ? getMediaUrl(c.user.dp) : "/default-dp.png"}
+                onError={(e) => {
+                  e.target.src = "/default-dp.png";
+                }}
+                width={44}
+                height={44}
+                className="rounded-circle"
+                style={{ objectFit: "cover" }}
+                alt=""
+              />
+
+              <div>
+                <strong>@{c.user?.username || "User"}</strong>
+                <p className="mb-0">{c.text}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
