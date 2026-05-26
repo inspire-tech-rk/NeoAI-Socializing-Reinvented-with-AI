@@ -1,5 +1,6 @@
 import { API_URL } from "../../../config";
 import FollowButton from "./FollowButton";
+import { useNavigate } from "react-router-dom";
 
 const getMediaUrl = (file) => {
   if (!file) return "/default-dp.png";
@@ -11,12 +12,18 @@ export default function SuggestionItem({ suggestedUser, onFollowChange }) {
   const { username, dp, isFollowing, mutualCount, mutualNames, reason, _id } =
     suggestedUser;
 
+  const navigate = useNavigate();
+
   return (
     <div
       className="d-flex align-items-center justify-content-between"
       style={{ padding: "4px 0" }}
     >
-      <div className="d-flex align-items-center gap-2">
+      <div
+        className="d-flex align-items-center gap-2"
+        style={{ cursor: "pointer" }}
+        onClick={() => navigate(`/profile/${_id}`)}
+      >
         <img
           src={getMediaUrl(dp)}
           onError={(e) => (e.target.src = "/default-dp.png")}
