@@ -1,4 +1,3 @@
-// stroryController.js
 
 import Story from "../models/Story.js";
 import mongoose from "mongoose";
@@ -21,47 +20,41 @@ export const uploadStory = async (req, res) => {
 // ✅ STORIES FOR FEED (GROUPED BY USER)
 export const getFeedStories = async (req, res) => {
   try {
-    const stories = await Story.aggregate([
-      {
-        $match: {
-          expiresAt: { $gt: new Date() },
-        },
-      },
-      {
-        $group: {
-          _id: "$user",
-          stories: {
-            $push: {
-              _id: "$_id",
-              file: "$file",
-              type: "$type",
-              createdAt: "$createdAt",
-              user: "$user",
-              likes: "$likes",
-              comments: "$comments",
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "_id",
-          foreignField: "_id",
-          as: "user",
-        },
-      },
-      {
-        $unwind: "$user",
-      },
-      {
-        $sort: {
-          "stories.createdAt": 1,
-        },
-      },
-    ]);
+    const stories = await Story.find({
+      expiresAt: { $gt: new Date() },
+    })
+      .sort({ createdAt: 1 })
+      .populate("user", "username dp")
+      .populate("likes", "username dp")
+      .populate("comments.user", "username dp");
 
-    res.json(stories);
+    const grouped = {};
+
+    stories.forEach((story) => {
+      const userId = story.user?._id?.toString();
+
+      if (!userId) return;
+
+      if (!grouped[userId]) {
+        grouped[userId] = {
+          _id: userId,
+          user: story.user,
+          stories: [],
+        };
+      }
+
+      grouped[userId].stories.push({
+        _id: story._id,
+        file: story.file,
+        type: story.type,
+        createdAt: story.createdAt,
+        user: story.user._id,
+        likes: story.likes || [],
+        comments: story.comments || [],
+      });
+    });
+
+    res.json(Object.values(grouped));
   } catch (err) {
     console.error(err);
     res.status(500).json({

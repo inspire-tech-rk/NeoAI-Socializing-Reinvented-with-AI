@@ -623,13 +623,19 @@ const storyCounterBtnStyle = {
 function StoryOverlayList({ title, users = [], comments = [], onClose }) {
   const list = title === "Likes" ? users : comments;
 
+  const getUserObj = (item) => {
+    if (!item) return null;
+    if (typeof item === "object") return item;
+    return null;
+  };
+
   return (
     <div
       onClick={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
         top: 0,
-        left: "calc(100% + 16px)",
+       left: "105%",
         width: 340,
         height: "100%",
         background: "#fff",
@@ -669,48 +675,56 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
       {list.length === 0 ? (
         <p className="text-center text-secondary mt-3">No {title}</p>
       ) : title === "Likes" ? (
-        users.map((u) => (
-          <div
-            key={u._id}
-            className="d-flex align-items-center gap-3"
-            style={{ padding: "12px 16px" }}
-          >
-            <img
-              src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
-              onError={(e) => (e.target.src = "/default-dp.png")}
-              width={46}
-              height={46}
-              className="rounded-circle"
-              style={{ objectFit: "cover" }}
-              alt=""
-            />
+        users.map((item, i) => {
+          const u = getUserObj(item);
 
-            <strong>@{u.username}</strong>
-          </div>
-        ))
-      ) : (
-        comments.map((c, i) => (
-          <div
-            key={c._id || i}
-            className="d-flex align-items-start gap-3"
-            style={{ padding: "12px 16px" }}
-          >
-            <img
-              src={c.user?.dp ? getMediaUrl(c.user.dp) : "/default-dp.png"}
-              onError={(e) => (e.target.src = "/default-dp.png")}
-              width={46}
-              height={46}
-              className="rounded-circle"
-              style={{ objectFit: "cover" }}
-              alt=""
-            />
+          return (
+            <div
+              key={u?._id || i}
+              className="d-flex align-items-center gap-3"
+              style={{ padding: "12px 16px" }}
+            >
+              <img
+                src={u?.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
+                onError={(e) => (e.currentTarget.src = "/default-dp.png")}
+                width={46}
+                height={46}
+                className="rounded-circle"
+                style={{ objectFit: "cover" }}
+                alt=""
+              />
 
-            <div>
-              <strong>@{c.user?.username || "User"}</strong>
-              <p className="mb-0">{c.text}</p>
+              <strong>@{u?.username || "Unknown user"}</strong>
             </div>
-          </div>
-        ))
+          );
+        })
+      ) : (
+        comments.map((c, i) => {
+          const u = getUserObj(c.user);
+
+          return (
+            <div
+              key={c._id || i}
+              className="d-flex align-items-start gap-3"
+              style={{ padding: "12px 16px" }}
+            >
+              <img
+                src={u?.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
+                onError={(e) => (e.currentTarget.src = "/default-dp.png")}
+                width={46}
+                height={46}
+                className="rounded-circle"
+                style={{ objectFit: "cover" }}
+                alt=""
+              />
+
+              <div>
+                <strong>@{u?.username || "Unknown user"}</strong>
+                <p className="mb-0">{c.text}</p>
+              </div>
+            </div>
+          );
+        })
       )}
     </div>
   );
