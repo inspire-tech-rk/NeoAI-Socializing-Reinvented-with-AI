@@ -41,7 +41,7 @@ export default function StoryBar() {
             ...group,
             stories: group.stories.filter((s) => s._id !== storyId),
           }))
-          .filter((group) => group.stories.length > 0)
+          .filter((group) => group.stories.length > 0),
       );
     } catch (err) {
       console.error("Delete failed", err);
@@ -72,6 +72,7 @@ export default function StoryBar() {
       {activeStory && (
         <StoryViewer
           stories={activeStory.stories}
+          storyOwner={activeStory.user}
           onClose={() => setActiveStory(null)}
           onDeleteStory={handleDeleteStory}
         />

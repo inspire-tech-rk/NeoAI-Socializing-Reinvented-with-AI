@@ -11,6 +11,7 @@ const getMediaUrl = (file) => {
 
 export default function StoryViewer({
   stories: initialStories = [],
+  storyOwner,
   onClose,
   onDeleteStory,
 }) {
@@ -295,7 +296,7 @@ export default function StoryViewer({
           height: "calc(100vh - 40px)",
           backgroundColor: "#060706f1",
           borderRadius: "8px",
-          overflow: "hidden",
+          overflow: "visible",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -372,9 +373,9 @@ export default function StoryViewer({
           >
             <img
               src={
-                loggedInUser?.dp
-                  ? getMediaUrl(loggedInUser.dp)
-                  : "/default-avatar.png"
+                storyOwner?.dp
+                  ? getMediaUrl(storyOwner.dp)
+                  : "/default-dp.png"
               }
               alt="user"
               style={{
@@ -394,7 +395,7 @@ export default function StoryViewer({
                 textShadow: "0 1px 2px rgba(0,0,0,0.8)",
               }}
             >
-              {loggedInUser?.username}
+              {storyOwner?.username || loggedInUser?.username}
             </span>
           </div>
 
@@ -501,7 +502,9 @@ export default function StoryViewer({
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder={`Reply to ${loggedInUser?.username || "user"}...`}
+              placeholder={`Reply to ${
+                storyOwner?.username || loggedInUser?.username || "user"
+              }...`}
               style={{
                 flex: 1,
                 height: 42,
@@ -625,98 +628,90 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
       onClick={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
-        inset: 0,
-        background: "rgba(0,0,0,0.65)",
+        top: 0,
+        left: "calc(100% + 16px)",
+        width: 340,
+        height: "100%",
+        background: "#fff",
+        borderRadius: 16,
         zIndex: 99999,
-        display: "flex",
-        alignItems: "flex-end",
+        overflowY: "auto",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
       }}
     >
       <div
+        className="d-flex justify-content-between align-items-center"
         style={{
-          width: "100%",
-          maxHeight: "55%",
+          padding: "14px 16px",
+          borderBottom: "1px solid #eee",
+          position: "sticky",
+          top: 0,
           background: "#fff",
-          borderTopLeftRadius: 18,
-          borderTopRightRadius: 18,
-          overflowY: "auto",
-          paddingBottom: 12,
+          zIndex: 2,
         }}
       >
-        <div
-          className="d-flex justify-content-between align-items-center"
+        <strong style={{ fontSize: 18 }}>{title}</strong>
+
+        <button
+          type="button"
+          onClick={onClose}
           style={{
-            padding: "14px 16px",
-            borderBottom: "1px solid #eee",
+            border: "none",
+            background: "transparent",
+            fontSize: 26,
+            cursor: "pointer",
           }}
         >
-          <strong style={{ fontSize: 18 }}>{title}</strong>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              border: "none",
-              background: "transparent",
-              fontSize: 24,
-              cursor: "pointer",
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        {list.length === 0 ? (
-          <p className="text-center text-secondary mt-3">No {title}</p>
-        ) : title === "Likes" ? (
-          users.map((u) => (
-            <div
-              key={u._id}
-              className="d-flex align-items-center gap-3"
-              style={{ padding: "10px 16px" }}
-            >
-              <img
-                src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
-                onError={(e) => {
-                  e.target.src = "/default-dp.png";
-                }}
-                width={44}
-                height={44}
-                className="rounded-circle"
-                style={{ objectFit: "cover" }}
-                alt=""
-              />
-
-              <strong>@{u.username}</strong>
-            </div>
-          ))
-        ) : (
-          comments.map((c, i) => (
-            <div
-              key={c._id || i}
-              className="d-flex align-items-start gap-3"
-              style={{ padding: "10px 16px" }}
-            >
-              <img
-                src={c.user?.dp ? getMediaUrl(c.user.dp) : "/default-dp.png"}
-                onError={(e) => {
-                  e.target.src = "/default-dp.png";
-                }}
-                width={44}
-                height={44}
-                className="rounded-circle"
-                style={{ objectFit: "cover" }}
-                alt=""
-              />
-
-              <div>
-                <strong>@{c.user?.username || "User"}</strong>
-                <p className="mb-0">{c.text}</p>
-              </div>
-            </div>
-          ))
-        )}
+          ×
+        </button>
       </div>
+
+      {list.length === 0 ? (
+        <p className="text-center text-secondary mt-3">No {title}</p>
+      ) : title === "Likes" ? (
+        users.map((u) => (
+          <div
+            key={u._id}
+            className="d-flex align-items-center gap-3"
+            style={{ padding: "12px 16px" }}
+          >
+            <img
+              src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
+              onError={(e) => (e.target.src = "/default-dp.png")}
+              width={46}
+              height={46}
+              className="rounded-circle"
+              style={{ objectFit: "cover" }}
+              alt=""
+            />
+
+            <strong>@{u.username}</strong>
+          </div>
+        ))
+      ) : (
+        comments.map((c, i) => (
+          <div
+            key={c._id || i}
+            className="d-flex align-items-start gap-3"
+            style={{ padding: "12px 16px" }}
+          >
+            <img
+              src={c.user?.dp ? getMediaUrl(c.user.dp) : "/default-dp.png"}
+              onError={(e) => (e.target.src = "/default-dp.png")}
+              width={46}
+              height={46}
+              className="rounded-circle"
+              style={{ objectFit: "cover" }}
+              alt=""
+            />
+
+            <div>
+              <strong>@{c.user?.username || "User"}</strong>
+              <p className="mb-0">{c.text}</p>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }

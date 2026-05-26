@@ -47,6 +47,10 @@ export const getFeedStories = async (req, res) => {
       { $unwind: "$user" },
       { $sort: { "stories.createdAt": 1 } },
     ]);
+    await Story.populate(stories, [
+      { path: "stories.likes", select: "username dp" },
+      { path: "stories.comments.user", select: "username dp" },
+    ]);
 
     res.json(stories);
   } catch (err) {
