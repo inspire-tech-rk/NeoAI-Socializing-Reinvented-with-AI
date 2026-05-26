@@ -629,20 +629,20 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
       style={{
         position: "absolute",
         top: 0,
-        left: "calc(100% + 16px)",
-        width: 340,
+        left: "calc(100% + 18px)",
+        width: 360,
         height: "100%",
         background: "#fff",
-        borderRadius: 16,
+        borderRadius: 18,
         zIndex: 99999,
         overflowY: "auto",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+        boxShadow: "0 20px 70px rgba(0,0,0,0.55)",
       }}
     >
       <div
         className="d-flex justify-content-between align-items-center"
         style={{
-          padding: "14px 16px",
+          padding: "15px 18px",
           borderBottom: "1px solid #eee",
           position: "sticky",
           top: 0,
@@ -650,7 +650,7 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
           zIndex: 2,
         }}
       >
-        <strong style={{ fontSize: 18 }}>{title}</strong>
+        <strong style={{ fontSize: 20 }}>{title}</strong>
 
         <button
           type="button"
@@ -658,7 +658,7 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
           style={{
             border: "none",
             background: "transparent",
-            fontSize: 26,
+            fontSize: 28,
             cursor: "pointer",
           }}
         >
@@ -667,50 +667,61 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
       </div>
 
       {list.length === 0 ? (
-        <p className="text-center text-secondary mt-3">No {title}</p>
+        <p className="text-center text-secondary mt-4">No {title}</p>
       ) : title === "Likes" ? (
-        users.map((u) => (
+        users.map((u, i) => (
           <div
-            key={u._id}
+            key={u?._id || i}
             className="d-flex align-items-center gap-3"
-            style={{ padding: "12px 16px" }}
+            style={{ padding: "13px 18px" }}
           >
             <img
-              src={u.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
+              src={u?.dp ? getMediaUrl(u.dp) : "/default-dp.png"}
               onError={(e) => (e.target.src = "/default-dp.png")}
-              width={46}
-              height={46}
-              className="rounded-circle"
-              style={{ objectFit: "cover" }}
-              alt=""
-            />
-
-            <strong>@{u.username}</strong>
-          </div>
-        ))
-      ) : (
-        comments.map((c, i) => (
-          <div
-            key={c._id || i}
-            className="d-flex align-items-start gap-3"
-            style={{ padding: "12px 16px" }}
-          >
-            <img
-              src={c.user?.dp ? getMediaUrl(c.user.dp) : "/default-dp.png"}
-              onError={(e) => (e.target.src = "/default-dp.png")}
-              width={46}
-              height={46}
+              width={48}
+              height={48}
               className="rounded-circle"
               style={{ objectFit: "cover" }}
               alt=""
             />
 
             <div>
-              <strong>@{c.user?.username || "User"}</strong>
-              <p className="mb-0">{c.text}</p>
+              <strong>{u?.username || "Unknown user"}</strong>
+              <div className="text-secondary small">@{u?.username || "user"}</div>
             </div>
           </div>
         ))
+      ) : (
+        comments.map((c, i) => {
+          const commentUser = c?.user;
+
+          return (
+            <div
+              key={c?._id || i}
+              className="d-flex align-items-start gap-3"
+              style={{ padding: "13px 18px" }}
+            >
+              <img
+                src={
+                  commentUser?.dp
+                    ? getMediaUrl(commentUser.dp)
+                    : "/default-dp.png"
+                }
+                onError={(e) => (e.target.src = "/default-dp.png")}
+                width={48}
+                height={48}
+                className="rounded-circle"
+                style={{ objectFit: "cover" }}
+                alt=""
+              />
+
+              <div>
+                <strong>{commentUser?.username || "Unknown user"}</strong>
+                <p className="mb-0">{c?.text}</p>
+              </div>
+            </div>
+          );
+        })
       )}
     </div>
   );
