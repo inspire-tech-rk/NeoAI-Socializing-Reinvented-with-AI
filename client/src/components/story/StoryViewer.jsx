@@ -635,7 +635,7 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
       style={{
         position: "absolute",
         top: 0,
-       left: "105%",
+        left: "calc(100% + 16px)",
         width: 340,
         height: "100%",
         background: "#fff",
