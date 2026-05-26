@@ -18,34 +18,41 @@ export const uploadStory = async (req, res) => {
 // ✅ STORIES FOR FEED (GROUPED BY USER)
 export const getFeedStories = async (req, res) => {
   try {
-    const allStories = await Story.find({
-      expiresAt: { $gt: new Date() },
-    })
-      .sort({ createdAt: 1 })
-      .populate("user", "username dp")
-      .populate("likes", "username dp")
-      .populate("comments.user", "username dp")
-      .lean();
+    const stories = await Story.aggregate([
+      { $match: { expiresAt: { $gt: new Date() } } },
+      {
+        $group: {
+          _id: "$user",
+          stories: {
+            $push: {
+              _id: "$_id",
+              file: "$file",
+              type: "$type",
+              createdAt: "$createdAt",
+              user: "$user",
+              likes: "$likes",
+              comments: "$comments",
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      { $sort: { "stories.createdAt": 1 } },
+    ]);
+    await Story.populate(stories, [
+      { path: "stories.likes", select: "username dp" },
+      { path: "stories.comments.user", select: "username dp" },
+    ]);
 
-    const grouped = {};
-
-    allStories.forEach((story) => {
-      const userId = story.user?._id?.toString();
-
-      if (!userId) return;
-
-      if (!grouped[userId]) {
-        grouped[userId] = {
-          _id: userId,
-          user: story.user,
-          stories: [],
-        };
-      }
-
-      grouped[userId].stories.push(story);
-    });
-
-    res.json(Object.values(grouped));
+    res.json(stories);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to load feed stories" });
