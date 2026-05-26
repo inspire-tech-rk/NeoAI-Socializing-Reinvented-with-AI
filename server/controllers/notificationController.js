@@ -10,6 +10,7 @@ export const getNotifications = async (req, res) => {
       .populate("sender", "username dp")
       .populate("post", "file image")
       .populate("reel", "media thumbnail")
+      .populate("story", "file type")
       .sort({ createdAt: -1 });
 
     const formatted = notifications.map((n) => ({

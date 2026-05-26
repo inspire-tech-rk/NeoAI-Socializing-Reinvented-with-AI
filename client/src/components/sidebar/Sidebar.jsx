@@ -26,26 +26,22 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
 
   const handleAcceptFollow = async (senderId, notificationId) => {
     try {
-      console.log("CLICKED FOLLOW BACK");
-
       await axios.post(
         `${API_URL}/api/users/${senderId}/follow`,
         {},
-        { withCredentials: true }
+        { withCredentials: true },
       );
-
-      console.log("FOLLOW API CALLED");
 
       await axios.put(
         `${API_URL}/api/notifications/${notificationId}/read`,
         {},
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       setNotifications((prev) =>
         prev.map((n) =>
-          n._id === notificationId ? { ...n, read: true, accepted: true } : n
-        )
+          n._id === notificationId ? { ...n, read: true, accepted: true } : n,
+        ),
       );
     } catch (err) {
       console.error("Follow back failed", err);
@@ -57,7 +53,7 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
 
     axios
       .get(`${API_URL}/api/notifications`, { withCredentials: true })
-      .then((res) => setNotifications(res.data))
+      .then((res) => setNotifications(Array.isArray(res.data) ? res.data : []))
       .catch((err) => console.error(err));
   }, [currentUser]);
 
@@ -102,7 +98,6 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                 height: "40px",
                 cursor: "pointer",
                 objectFit: "contain",
-                transition: "transform 0.2s",
               }}
             />
 
@@ -113,53 +108,11 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
             )}
           </h4>
 
-          <SidebarItem
-            icon="house-door-fill"
-            label="Home"
-            to="/"
-            active={location.pathname === "/"}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
-
-          <SidebarItem
-            icon="search"
-            label="Search"
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
-
-          <SidebarItem
-            icon="robot"
-            label="NexAI"
-            to="/nexai"
-            active={location.pathname === "/nexai"}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
-
-          <SidebarItem
-            icon="film"
-            label="Reels"
-            to="/reels"
-            active={location.pathname === "/reels"}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
-
-          <SidebarItem
-            icon="chat-dots"
-            label="Messages"
-            to="/messages"
-            active={location.pathname === "/messages"}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
+          <SidebarItem icon="house-door-fill" label="Home" to="/" active={location.pathname === "/"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem icon="search" label="Search" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem icon="robot" label="NexAI" to="/nexai" active={location.pathname === "/nexai"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem icon="film" label="Reels" to="/reels" active={location.pathname === "/reels"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem icon="chat-dots" label="Messages" to="/messages" active={location.pathname === "/messages"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
 
           <div style={{ position: "relative" }}>
             <div
@@ -168,13 +121,7 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                 setShowNotif(!showNotif);
               }}
             >
-              <SidebarItem
-                icon="bell"
-                label="Notification"
-                selectedItem={selectedItem}
-                setSelectedItem={setSelectedItem}
-                hovered={hovered}
-              />
+              <SidebarItem icon="bell" label="Notification" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
             </div>
 
             {unreadCount > 0 && (
@@ -200,52 +147,16 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
           </div>
 
           <div onClick={() => setIsCreateOpen(true)}>
-            <SidebarItem
-              icon="plus-square"
-              label="Create"
-              selectedItem={selectedItem}
-              setSelectedItem={setSelectedItem}
-              hovered={hovered}
-            />
+            <SidebarItem icon="plus-square" label="Create" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
           </div>
 
-          <SidebarItem
-            icon="speedometer2"
-            label="Dashboard"
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
-
-          <SidebarItem
-            icon="person-circle"
-            label="Profile"
-            to="/profile"
-            active={location.pathname === "/profile"}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
+          <SidebarItem icon="speedometer2" label="Dashboard" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem icon="person-circle" label="Profile" to="/profile" active={location.pathname === "/profile"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
 
           <br />
 
-          <SidebarItem
-            icon="gear"
-            label="Settings"
-            to="/settings"
-            active={location.pathname === "/settings"}
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
-
-          <SidebarItem
-            icon="list"
-            label="More"
-            selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            hovered={hovered}
-          />
+          <SidebarItem icon="gear" label="Settings" to="/settings" active={location.pathname === "/settings"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem icon="list" label="More" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
         </div>
       </div>
 
@@ -300,13 +211,13 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                     await axios.put(
                       `${API_URL}/api/notifications/${n._id}/read`,
                       {},
-                      { withCredentials: true }
+                      { withCredentials: true },
                     );
 
                     setNotifications((prev) =>
                       prev.map((item) =>
-                        item._id === n._id ? { ...item, read: true } : item
-                      )
+                        item._id === n._id ? { ...item, read: true } : item,
+                      ),
                     );
 
                     if (n.sender?._id) {
@@ -342,9 +253,7 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                       )}
 
                       {n.type === "follow" && (
-                        <div
-                          style={{ display: "flex", flexDirection: "column" }}
-                        >
+                        <div style={{ display: "flex", flexDirection: "column" }}>
                           <span>started following you</span>
 
                           {!n.accepted && (
@@ -363,7 +272,6 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-
                                 await handleAcceptFollow(n.sender._id, n._id);
                               }}
                             >
@@ -375,6 +283,20 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
 
                       {n.type === "follow_accept" && (
                         <span>accepted your follow</span>
+                      )}
+
+                      {n.type === "story_like" && (
+                        <span>liked your story</span>
+                      )}
+
+                      {n.type === "story_comment" && (
+                        <>
+                          replied to your story:{" "}
+                          <span style={{ color: "#aaa" }}>
+                            "{n.commentText?.slice(0, 45)}"
+                            {n.commentText?.length > 45 && "..."}
+                          </span>
+                        </>
                       )}
                     </span>
 
@@ -390,9 +312,34 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                   </div>
                 </div>
 
-                {(n.reel?.media || n.post?.file) && (
+                {(n.reel?.media || n.post?.file || n.story?.file) && (
                   <>
-                    {n.reel?.media ? (
+                    {n.story?.file ? (
+                      n.story.type === "video" ? (
+                        <video
+                          src={getMediaUrl(n.story.file)}
+                          width="45"
+                          height="45"
+                          muted
+                          playsInline
+                          style={{
+                            objectFit: "cover",
+                            borderRadius: "6px",
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={getMediaUrl(n.story.file)}
+                          width="45"
+                          height="45"
+                          alt="story"
+                          style={{
+                            objectFit: "cover",
+                            borderRadius: "6px",
+                          }}
+                        />
+                      )
+                    ) : n.reel?.media ? (
                       <video
                         src={getMediaUrl(n.reel.media)}
                         width="45"

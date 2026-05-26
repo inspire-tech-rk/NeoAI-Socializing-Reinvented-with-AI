@@ -79,7 +79,7 @@ export default function StoryViewer({
     setComments(story.comments || []);
 
     const alreadyLiked = story.likes?.some(
-      (u) => (u._id || u)?.toString() === loggedInUser._id.toString()
+      (u) => (u._id || u)?.toString() === loggedInUser._id.toString(),
     );
 
     setLiked(!!alreadyLiked);
@@ -189,6 +189,13 @@ export default function StoryViewer({
       const data = await res.json();
 
       setLiked(data.liked);
+      setStories((prev) =>
+        prev.map((s) =>
+          s._id === story._id
+            ? { ...s, likes: data.likes || [], comments: data.comments || [] }
+            : s,
+        ),
+      );
       setLikes(data.likes || []);
       setComments(data.comments || []);
     } catch (err) {
@@ -218,6 +225,13 @@ export default function StoryViewer({
 
       setLikes(data.likes || []);
       setComments(data.comments || []);
+      setStories((prev) =>
+        prev.map((s) =>
+          s._id === story._id
+            ? { ...s, likes: data.likes || [], comments: data.comments || [] }
+            : s,
+        ),
+      );
       setCommentText("");
     } catch (err) {
       console.error(err);
@@ -507,82 +521,40 @@ export default function StoryViewer({
 
           {story.user === loggedInUser?._id && (
             <div
+              onClick={(e) => e.stopPropagation()}
               style={{
                 position: "absolute",
-                bottom: 72,
+                bottom: 70,
                 left: 14,
                 right: 14,
-                maxHeight: 180,
-                overflowY: "auto",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
                 zIndex: 30,
+                color: "#fff",
               }}
-              onClick={(e) => e.stopPropagation()}
             >
-              {likes.length > 0 && (
-                <div
-                  style={{
-                    marginBottom: 10,
-                    background: "rgba(0,0,0,0.4)",
-                    padding: 10,
-                    borderRadius: 10,
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#ff4d88",
-                      fontWeight: 600,
-                      marginBottom: 6,
-                    }}
-                  >
-                    ♥ {likes.length} Likes
-                  </div>
+              <div
+                style={{
+                  background: "rgba(0,0,0,0.45)",
+                  padding: "8px 12px",
+                  borderRadius: 20,
+                  fontWeight: 600,
+                }}
+              >
+                ♥ {likes.length} likes
+              </div>
 
-                  {likes.map((u) => (
-                    <div
-                      key={u._id}
-                      style={{
-                        color: "#fff",
-                        fontSize: 13,
-                      }}
-                    >
-                      @{u.username}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {comments.length > 0 && (
-                <div
-                  style={{
-                    background: "rgba(0,0,0,0.4)",
-                    padding: 10,
-                    borderRadius: 10,
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#fff",
-                      fontWeight: 600,
-                      marginBottom: 6,
-                    }}
-                  >
-                    💬 {comments.length} Comments
-                  </div>
-
-                  {comments.map((c, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        color: "#fff",
-                        fontSize: 13,
-                        marginBottom: 5,
-                      }}
-                    >
-                      <strong>@{c.user?.username}</strong> {c.text}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div
+                style={{
+                  background: "rgba(0,0,0,0.45)",
+                  padding: "8px 12px",
+                  borderRadius: 20,
+                  fontWeight: 600,
+                }}
+              >
+                💬 {comments.length} comments
+              </div>
             </div>
           )}
         </div>

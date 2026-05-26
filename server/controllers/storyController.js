@@ -30,6 +30,8 @@ export const getFeedStories = async (req, res) => {
               type: "$type",
               createdAt: "$createdAt",
               user: "$user",
+              likes: "$likes",
+              comments: "$comments",
             },
           },
         },
@@ -64,7 +66,10 @@ export const getStoriesByUser = async (req, res) => {
   const stories = await Story.find({
     user: userId,
     expiresAt: { $gt: new Date() },
-  }).sort({ createdAt: 1 });
+  })
+    .sort({ createdAt: 1 })
+    .populate("likes", "username dp")
+    .populate("comments.user", "username dp");
 
   res.json(stories);
 };
@@ -196,7 +201,6 @@ export const commentOnStory = async (req, res) => {
       likes: updatedStory.likes,
       comments: updatedStory.comments,
     });
-
   } catch (err) {
     console.error(err);
 

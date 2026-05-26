@@ -14,7 +14,14 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["like", "comment", "follow", "follow_accept", "story_like", "story_comment"],
+      enum: [
+        "like",
+        "comment",
+        "follow",
+        "follow_accept",
+        "story_like",
+        "story_comment",
+      ],
 
       required: true,
       lowercase: true,
@@ -35,6 +42,12 @@ const notificationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Reel",
     },
+
+    story: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Story",
+    },
+
     read: {
       type: Boolean,
       default: false,
