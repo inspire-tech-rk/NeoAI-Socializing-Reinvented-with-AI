@@ -13,12 +13,33 @@ export const getNotifications = async (req, res) => {
       .populate("story", "file type")
       .sort({ createdAt: -1 });
 
-    const formatted = notifications.map((n) => ({
-      ...n._doc,
-      accepted: n.accepted || false,
-    }));
+    const grouped = {};
 
-    res.json(formatted);
+    notifications.forEach((n) => {
+      const targetId =
+        n.post?._id?.toString() ||
+        n.reel?._id?.toString() ||
+        n.story?._id?.toString() ||
+        n._id.toString();
+
+      const key = `${n.type}-${targetId}`;
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          ...n._doc,
+          senders: [],
+          count: 0,
+          accepted: n.accepted || false,
+        };
+      }
+
+      grouped[key].senders.push(n.sender);
+      grouped[key].count += 1;
+
+      if (!n.read) grouped[key].read = false;
+    });
+
+    res.json(Object.values(grouped));
   } catch (err) {
     console.error("Get Notifications Error:", err);
     res.status(500).json({ message: "Server error" });
