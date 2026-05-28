@@ -163,7 +163,19 @@ export default function FeedPage() {
     </span>
   </div>
 
-
+ 
+ {/* RIGHT SIDE NOTIFICATION */}
+<div
+  className="d-flex align-items-center gap-1 text-white"
+  style={{
+    fontSize: "15px",
+    fontWeight: "600",
+    cursor: "pointer",
+  }}
+>
+  <i className="bi bi-bell-fill" style={{ fontSize: "20px" }}></i>
+  <span>Notification</span>
+</div>
 </div>
         <StoryBar />
 
