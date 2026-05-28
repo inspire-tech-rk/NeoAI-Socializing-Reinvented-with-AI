@@ -49,7 +49,7 @@ export default function ChatWindow({ selectedUser }) {
 
   return (
     <div
-      className="flex-grow-1 d-flex flex-column"
+  className="flex-grow-1 d-flex flex-column chat-window"
       style={{ height: "100vh", minHeight: 0 }} // 🔥 important
     >
       {/* Header */}

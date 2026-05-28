@@ -88,7 +88,7 @@ export default function StoryViewer({
     setComments(story.comments || []);
 
     const alreadyLiked = story.likes?.some(
-      (u) => (u._id || u)?.toString() === loggedInUser._id.toString()
+      (u) => (u._id || u)?.toString() === loggedInUser._id.toString(),
     );
 
     setLiked(!!alreadyLiked);
@@ -204,8 +204,8 @@ export default function StoryViewer({
         prev.map((s) =>
           s._id === story._id
             ? { ...s, likes: data.likes || [], comments: data.comments || [] }
-            : s
-        )
+            : s,
+        ),
       );
       setLikes(data.likes || []);
       setComments(data.comments || []);
@@ -240,8 +240,8 @@ export default function StoryViewer({
         prev.map((s) =>
           s._id === story._id
             ? { ...s, likes: data.likes || [], comments: data.comments || [] }
-            : s
-        )
+            : s,
+        ),
       );
       setCommentText("");
     } catch (err) {
@@ -373,9 +373,7 @@ export default function StoryViewer({
           >
             <img
               src={
-                storyOwner?.dp
-                  ? getMediaUrl(storyOwner.dp)
-                  : "/default-dp.png"
+                storyOwner?.dp ? getMediaUrl(storyOwner.dp) : "/default-dp.png"
               }
               alt="user"
               style={{
@@ -631,6 +629,7 @@ function StoryOverlayList({ title, users = [], comments = [], onClose }) {
 
   return (
     <div
+      className="story-overlay-list"
       onClick={(e) => e.stopPropagation()}
       style={{
         position: "absolute",
