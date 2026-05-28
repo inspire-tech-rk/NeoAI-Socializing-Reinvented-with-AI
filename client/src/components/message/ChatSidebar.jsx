@@ -46,7 +46,7 @@ export default function ChatSidebar({ onSelectUser }) {
       >
         {/* LOGO */}
         <img
-          src="/NexlyLogo.png" // ✅ use same logo as MainSidebar
+          src="/neoaiLogo.png" // ✅ use same logo as MainSidebar
           alt="logo"
           style={{
             width: "35px",
