@@ -1,5 +1,5 @@
-const [notifications, setNotifications] = useState([]);
-const [showNotif, setShowNotif] = useState(false);
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import PostCard from "../components/feed/postCard/PostCard";
 import StoryBar from "../components/feed/storyBar/StoryBar";
@@ -11,6 +11,11 @@ export default function FeedPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotif, setShowNotif] = useState(false);
+  const navigate = useNavigate();
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const observerRef = useRef(null);
   const initialFetchRef = useRef(false);
@@ -56,6 +61,7 @@ export default function FeedPage() {
     initialFetchRef.current = true;
     fetchPosts();
   }, []);
+
   useEffect(() => {
     axios
       .get(`${API_URL}/api/notifications`, { withCredentials: true })
@@ -111,8 +117,6 @@ export default function FeedPage() {
       window.removeEventListener("reel-like-updated", handleReelLikeUpdated);
     };
   }, []);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div
@@ -172,19 +176,19 @@ export default function FeedPage() {
           </div>
 
           {/* RIGHT SIDE NOTIFICATION */}
-          <div
-            className="position-relative text-white fs-5"
-            style={{ cursor: "pointer" }}
-            onClick={() => setShowNotif(!showNotif)}
-          >
-            <i className="bi bi-bell"></i>
+          <div className="position-relative text-white fs-5">
+            <i
+              className="bi bi-heart"
+              style={{ cursor: "pointer" }}
+              onClick={() => setShowNotif(!showNotif)}
+            ></i>
 
             {unreadCount > 0 && (
               <span
                 style={{
                   position: "absolute",
-                  top: -6,
-                  right: -8,
+                  top: -8,
+                  right: -10,
                   background: "red",
                   color: "white",
                   borderRadius: "50%",
@@ -201,77 +205,87 @@ export default function FeedPage() {
             )}
           </div>
         </div>
-        <StoryBar />
         {showNotif && (
-          <div
-            className="d-md-none"
-            style={{
-              position: "fixed",
-              top: 58,
-              right: 12,
-              width: 310,
-              maxHeight: 420,
-              overflowY: "auto",
-              background: "#111",
-              color: "#fff",
-              border: "1px solid #2c2c2c",
-              borderRadius: 12,
-              padding: 10,
-              zIndex: 5000,
-              boxShadow: "0 10px 35px rgba(0,0,0,0.45)",
-            }}
-          >
-            <h6 className="mb-2">Notifications</h6>
+  <div
+    className="d-md-none"
+    style={{
+      position: "fixed",
+      top: 58,
+      right: 12,
+      width: 310,
+      maxHeight: 420,
+      overflowY: "auto",
+      background: "#111",
+      border: "1px solid #333",
+      borderRadius: 10,
+      padding: 10,
+      zIndex: 5000,
+      color: "white",
+      boxShadow: "0 10px 35px rgba(0,0,0,0.45)",
+    }}
+  >
+    {notifications.length === 0 ? (
+      <p className="text-secondary mb-0">No notifications</p>
+    ) : (
+      notifications.map((n) => (
+        <div
+          key={n._id}
+          onClick={async () => {
+            await axios.put(
+              `${API_URL}/api/notifications/${n._id}/read`,
+              {},
+              { withCredentials: true }
+            );
 
-            {notifications.length === 0 ? (
-              <p className="text-secondary mb-0">No notifications</p>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n._id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 4px",
-                    borderBottom: "1px solid #222",
-                    opacity: n.read ? 0.6 : 1,
-                  }}
-                >
-                  <img
-                    src={
-                      n.sender?.dp
-                        ? n.sender.dp.startsWith("http")
-                          ? n.sender.dp
-                          : `${API_URL}/${n.sender.dp.replace(/^\/+/, "")}`
-                        : "/default-dp.png"
-                    }
-                    onError={(e) => (e.currentTarget.src = "/default-dp.png")}
-                    width={36}
-                    height={36}
-                    style={{
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                    }}
-                    alt=""
-                  />
+            setNotifications((prev) =>
+              prev.map((item) =>
+                item._id === n._id ? { ...item, read: true } : item
+              )
+            );
 
-                  <div style={{ fontSize: 13 }}>
-                    <strong>{n.sender?.username}</strong>{" "}
-                    {n.type === "like" && "liked your post"}
-                    {n.type === "comment" &&
-                      `commented: ${n.commentText || ""}`}
-                    {n.type === "follow" && "started following you"}
-                    {n.type === "follow_accept" && "accepted your follow"}
-                    {n.type === "story_like" && "liked your story"}
-                    {n.type === "story_comment" &&
-                      `replied to your story: ${n.commentText || ""}`}
-                  </div>
-                </div>
-              ))
-            )}
+            if (n.sender?._id) navigate(`/profile/${n.sender._id}`);
+            setShowNotif(false);
+          }}
+          style={{
+            display: "flex",
+            gap: 10,
+            padding: "9px 4px",
+            borderBottom: "1px solid #2c2c2c",
+            cursor: "pointer",
+            opacity: n.read ? 0.6 : 1,
+          }}
+        >
+          <img
+            src={
+              n.sender?.dp
+                ? n.sender.dp.startsWith("http")
+                  ? n.sender.dp
+                  : `${API_URL}/${n.sender.dp.replace(/^\/+/, "")}`
+                : "/default-dp.png"
+            }
+            onError={(e) => (e.target.src = "/default-dp.png")}
+            width="36"
+            height="36"
+            style={{ borderRadius: "50%", objectFit: "cover" }}
+            alt=""
+          />
+
+          <div style={{ fontSize: 13 }}>
+            <strong>{n.sender?.username}</strong>{" "}
+            {n.type === "like" && "liked your post"}
+            {n.type === "comment" && `commented: ${n.commentText || ""}`}
+            {n.type === "follow" && "started following you"}
+            {n.type === "follow_accept" && "accepted your follow"}
+            {n.type === "story_like" && "liked your story"}
+            {n.type === "story_comment" &&
+              `replied to your story: ${n.commentText || ""}`}
           </div>
-        )}
+        </div>
+      ))
+    )}
+  </div>
+)}
+        <StoryBar />
 
         {posts.map((post) => (
           <PostCard key={post._id} post={post} onUpdate={setPosts} />
