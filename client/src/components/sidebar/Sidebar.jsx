@@ -91,8 +91,8 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
             style={{ fontSize: "1.5rem" }}
           >
             <img
-              src="/NexlyLogo.png"
-              alt="Nexly Logo"
+              src="neoai-logo.png"
+              alt="NeoAI Logo"
               style={{
                 width: "40px",
                 height: "40px",
