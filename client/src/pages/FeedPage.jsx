@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+const [notifications, setNotifications] = useState([]);
+const [showNotif, setShowNotif] = useState(false);
 import axios from "axios";
 import PostCard from "../components/feed/postCard/PostCard";
 import StoryBar from "../components/feed/storyBar/StoryBar";
@@ -55,6 +56,12 @@ export default function FeedPage() {
     initialFetchRef.current = true;
     fetchPosts();
   }, []);
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/api/notifications`, { withCredentials: true })
+      .then((res) => setNotifications(Array.isArray(res.data) ? res.data : []))
+      .catch((err) => console.error("Notification fetch failed", err));
+  }, []);
 
   // ------------------- INFINITE SCROLL -------------------
   useEffect(() => {
@@ -105,6 +112,8 @@ export default function FeedPage() {
     };
   }, []);
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   return (
     <div
       style={{
@@ -127,57 +136,142 @@ export default function FeedPage() {
           margin: "0 auto",
         }}
       >
-
         {/* MOBILE TOP HEADER */}
-<div
-  className="d-flex d-md-none justify-content-between align-items-center px-3 py-2"
-  style={{
-    position: "sticky",
-    top: 0,
-    zIndex: 1000,
-    background: "#0f1115",
-    borderBottom: "1px solid #222",
-  }}
->
-  {/* LEFT SIDE LOGO */}
-  <div className="d-flex align-items-center gap-2">
-    <img
-      src="/neoai-logo.png"
-      alt="NeoAI"
-      style={{
-        width: 34,
-        height: 34,
-        objectFit: "contain",
-      }}
-    />
+        <div
+          className="d-flex d-md-none justify-content-between align-items-center px-3 py-2"
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 1000,
+            background: "#0f1115",
+            borderBottom: "1px solid #222",
+          }}
+        >
+          {/* LEFT SIDE LOGO */}
+          <div className="d-flex align-items-center gap-2">
+            <img
+              src="/neoai-logo.png"
+              alt="NeoAI"
+              style={{
+                width: 34,
+                height: 34,
+                objectFit: "contain",
+              }}
+            />
 
-    <span
-      style={{
-        color: "white",
-        fontWeight: "700",
-        fontSize: "22px",
-        letterSpacing: "0.5px",
-      }}
-    >
-      NeoAI
-    </span>
-  </div>
+            <span
+              style={{
+                color: "white",
+                fontWeight: "700",
+                fontSize: "22px",
+                letterSpacing: "0.5px",
+              }}
+            >
+              NeoAI
+            </span>
+          </div>
 
- 
- {/* RIGHT SIDE NOTIFICATION */}
-<div
-  className="d-flex align-items-center gap-1 text-white"
-  style={{
-    fontSize: "15px",
-    fontWeight: "600",
-    cursor: "pointer",
-  }}
->
-  <i className="bi bi-bell-fill" style={{ fontSize: "20px" }}></i>
-  <span>Notification</span>
-</div>
-</div>
+          {/* RIGHT SIDE NOTIFICATION */}
+          <div
+            className="position-relative text-white fs-5"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowNotif(!showNotif)}
+          >
+            <i className="bi bi-bell"></i>
+
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -8,
+                  background: "red",
+                  color: "white",
+                  borderRadius: "50%",
+                  fontSize: 11,
+                  width: 17,
+                  height: 17,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {unreadCount}
+              </span>
+            )}
+          </div>
+        </div>
         <StoryBar />
+        {showNotif && (
+          <div
+            className="d-md-none"
+            style={{
+              position: "fixed",
+              top: 58,
+              right: 12,
+              width: 310,
+              maxHeight: 420,
+              overflowY: "auto",
+              background: "#111",
+              color: "#fff",
+              border: "1px solid #2c2c2c",
+              borderRadius: 12,
+              padding: 10,
+              zIndex: 5000,
+              boxShadow: "0 10px 35px rgba(0,0,0,0.45)",
+            }}
+          >
+            <h6 className="mb-2">Notifications</h6>
+
+            {notifications.length === 0 ? (
+              <p className="text-secondary mb-0">No notifications</p>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n._id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 4px",
+                    borderBottom: "1px solid #222",
+                    opacity: n.read ? 0.6 : 1,
+                  }}
+                >
+                  <img
+                    src={
+                      n.sender?.dp
+                        ? n.sender.dp.startsWith("http")
+                          ? n.sender.dp
+                          : `${API_URL}/${n.sender.dp.replace(/^\/+/, "")}`
+                        : "/default-dp.png"
+                    }
+                    onError={(e) => (e.currentTarget.src = "/default-dp.png")}
+                    width={36}
+                    height={36}
+                    style={{
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                    }}
+                    alt=""
+                  />
+
+                  <div style={{ fontSize: 13 }}>
+                    <strong>{n.sender?.username}</strong>{" "}
+                    {n.type === "like" && "liked your post"}
+                    {n.type === "comment" &&
+                      `commented: ${n.commentText || ""}`}
+                    {n.type === "follow" && "started following you"}
+                    {n.type === "follow_accept" && "accepted your follow"}
+                    {n.type === "story_like" && "liked your story"}
+                    {n.type === "story_comment" &&
+                      `replied to your story: ${n.commentText || ""}`}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {posts.map((post) => (
           <PostCard key={post._id} post={post} onUpdate={setPosts} />
