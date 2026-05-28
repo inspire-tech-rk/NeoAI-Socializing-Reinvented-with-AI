@@ -163,12 +163,6 @@ export default function FeedPage() {
     </span>
   </div>
 
-  {/* RIGHT SIDE ICONS */}
-  <div className="d-flex align-items-center gap-3 text-white fs-5">
-    <i className="bi bi-heart"></i>
-    <i className="bi bi-chat-dots"></i>
-  </div>
-</div>
         <StoryBar />
 
         {posts.map((post) => (
