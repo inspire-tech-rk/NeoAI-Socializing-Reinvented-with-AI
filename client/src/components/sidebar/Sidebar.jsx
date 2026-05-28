@@ -92,7 +92,7 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
           >
             <img
               src="/neoaiLogo.png"
-              alt="Nexly Logo"
+              alt="NeoAI Logo"
               style={{
                 width: "40px",
                 height: "40px",
@@ -108,11 +108,49 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
             )}
           </h4>
 
-          <SidebarItem icon="house-door-fill" label="Home" to="/" active={location.pathname === "/"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
-          <SidebarItem icon="search" label="Search" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
-          <SidebarItem icon="robot" label="NexAI" to="/nexai" active={location.pathname === "/nexai"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
-          <SidebarItem icon="film" label="Reels" to="/reels" active={location.pathname === "/reels"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
-          <SidebarItem icon="chat-dots" label="Messages" to="/messages" active={location.pathname === "/messages"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem
+            icon="house-door-fill"
+            label="Home"
+            to="/"
+            active={location.pathname === "/"}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
+          <SidebarItem
+            icon="search"
+            label="Search"
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
+          <SidebarItem
+            icon="robot"
+            label="NexAI"
+            to="/nexai"
+            active={location.pathname === "/nexai"}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
+          <SidebarItem
+            icon="film"
+            label="Reels"
+            to="/reels"
+            active={location.pathname === "/reels"}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
+          <SidebarItem
+            icon="chat-dots"
+            label="Messages"
+            to="/messages"
+            active={location.pathname === "/messages"}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
 
           <div style={{ position: "relative" }}>
             <div
@@ -121,7 +159,13 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                 setShowNotif(!showNotif);
               }}
             >
-              <SidebarItem icon="bell" label="Notification" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+              <SidebarItem
+                icon="bell"
+                label="Notification"
+                selectedItem={selectedItem}
+                setSelectedItem={setSelectedItem}
+                hovered={hovered}
+              />
             </div>
 
             {unreadCount > 0 && (
@@ -147,16 +191,50 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
           </div>
 
           <div onClick={() => setIsCreateOpen(true)}>
-            <SidebarItem icon="plus-square" label="Create" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+            <SidebarItem
+              icon="plus-square"
+              label="Create"
+              selectedItem={selectedItem}
+              setSelectedItem={setSelectedItem}
+              hovered={hovered}
+            />
           </div>
 
-          <SidebarItem icon="speedometer2" label="Dashboard" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
-          <SidebarItem icon="person-circle" label="Profile" to="/profile" active={location.pathname === "/profile"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem
+            icon="speedometer2"
+            label="Dashboard"
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
+          <SidebarItem
+            icon="person-circle"
+            label="Profile"
+            to="/profile"
+            active={location.pathname === "/profile"}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
 
           <br />
 
-          <SidebarItem icon="gear" label="Settings" to="/settings" active={location.pathname === "/settings"} selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
-          <SidebarItem icon="list" label="More" selectedItem={selectedItem} setSelectedItem={setSelectedItem} hovered={hovered} />
+          <SidebarItem
+            icon="gear"
+            label="Settings"
+            to="/settings"
+            active={location.pathname === "/settings"}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
+          <SidebarItem
+            icon="list"
+            label="More"
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            hovered={hovered}
+          />
         </div>
       </div>
 
@@ -228,7 +306,11 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                   }}
                 >
                   <img
-                    src={n.sender?.dp ? getMediaUrl(n.sender.dp) : "/avatar.png"}
+                    src={
+                      n.senders?.[0]?.dp || n.sender?.dp
+                        ? getMediaUrl(n.senders?.[0]?.dp || n.sender?.dp)
+                        : "/avatar.png"
+                    }
                     onError={(e) => (e.target.src = "/avatar.png")}
                     width="35"
                     height="35"
@@ -238,10 +320,16 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
 
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     <span style={{ color: "white", fontSize: "14px" }}>
-                      <strong>{n.sender?.username}</strong>{" "}
-
+                      <strong>
+                        {n.senders?.[0]?.username || n.sender?.username}
+                      </strong>
+                      {n.count > 1 && (
+                        <>
+                          {" "}
+                          and {n.count - 1} other{n.count - 1 > 1 ? "s" : ""}
+                        </>
+                      )}{" "}
                       {n.type === "like" && "liked your post"}
-
                       {n.type === "comment" && (
                         <>
                           commented:{" "}
@@ -251,9 +339,10 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                           </span>
                         </>
                       )}
-
                       {n.type === "follow" && (
-                        <div style={{ display: "flex", flexDirection: "column" }}>
+                        <div
+                          style={{ display: "flex", flexDirection: "column" }}
+                        >
                           <span>started following you</span>
 
                           {!n.accepted && (
@@ -280,15 +369,10 @@ export default function Sidebar({ currentUser, hovered, setHovered }) {
                           )}
                         </div>
                       )}
-
                       {n.type === "follow_accept" && (
                         <span>accepted your follow</span>
                       )}
-
-                      {n.type === "story_like" && (
-                        <span>liked your story</span>
-                      )}
-
+                      {n.type === "story_like" && <span>liked your story</span>}
                       {n.type === "story_comment" && (
                         <>
                           replied to your story:{" "}
