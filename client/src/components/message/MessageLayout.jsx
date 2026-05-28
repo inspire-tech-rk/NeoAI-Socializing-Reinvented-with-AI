@@ -6,8 +6,8 @@ export default function MessageLayout() {
   const [selectedUser, setSelectedUser] = useState(null);
 
   return (
-   <div
-  className="d-flex message-layout"
+    <div
+      className="d-flex"
       style={{
         height: "100vh",
         background: "#000",

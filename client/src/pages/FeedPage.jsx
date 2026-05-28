@@ -23,7 +23,7 @@ export default function FeedPage() {
     try {
       const res = await axios.get(
         `${API_URL}/api/posts/feed?page=${page}&limit=5`,
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
       if (!res.data || res.data.length === 0) {
@@ -33,7 +33,7 @@ export default function FeedPage() {
           const existingIds = new Set(prev.map((p) => p._id));
 
           const newPosts = res.data.filter(
-            (p) => p.user && !existingIds.has(p._id),
+            (p) => p.user && !existingIds.has(p._id)
           );
 
           return [...prev, ...newPosts];
@@ -62,7 +62,7 @@ export default function FeedPage() {
 
     const observer = new IntersectionObserver(
       ([entry]) => entry.isIntersecting && fetchPosts(),
-      { threshold: 1 },
+      { threshold: 1 }
     );
 
     observer.observe(observerRef.current);
@@ -83,14 +83,18 @@ export default function FeedPage() {
     const handleDeletedUserPosts = (e) => {
       const deletedUserId = e.detail.userId;
 
-      setPosts((prev) => prev.filter((p) => p.user?._id !== deletedUserId));
+      setPosts((prev) =>
+        prev.filter((p) => p.user?._id !== deletedUserId)
+      );
     };
 
     const handleReelLikeUpdated = (e) => {
       const { reelId, reel } = e.detail;
 
       setPosts((prev) =>
-        prev.map((p) => (p.reel?._id === reelId ? { ...p, reel } : p)),
+        prev.map((p) =>
+          p.reel?._id === reelId ? { ...p, reel } : p
+        )
       );
     };
 
@@ -117,26 +121,31 @@ export default function FeedPage() {
     >
       {/* ------------------- MAIN FEED (LEFT SIDE) ------------------- */}
       <div
-        className="feed-main"
         style={{
           flex: 1,
           maxWidth: 600,
-          width: "100%",
-          paddingLeft: 16,
-          paddingRight: 16,
-          margin: "0 auto",
+          minWidth: 400,
+          paddingLeft: 60,
+          paddingRight: 40,
+          marginLeft: 120,
         }}
       >
         <StoryBar />
 
         {posts.map((post) => (
-          <PostCard key={post._id} post={post} onUpdate={setPosts} />
+          <PostCard
+            key={post._id}
+            post={post}
+            onUpdate={setPosts}
+          />
         ))}
 
         {hasMore && (
           <div ref={observerRef} style={{ height: 40 }}>
             {loading && (
-              <p className="text-center text-secondary">Loading...</p>
+              <p className="text-center text-secondary">
+                Loading...
+              </p>
             )}
           </div>
         )}
@@ -144,7 +153,7 @@ export default function FeedPage() {
 
       {/* ------------------- SUGGESTIONS RIGHT SIDEBAR ------------------- */}
       <div
-        className="suggestions-sidebar d-none d-lg-block"
+        className="d-none d-lg-block"
         style={{
           width: 300,
           position: "fixed",

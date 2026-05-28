@@ -15,7 +15,7 @@ export default function PostCard({ post, onUpdate }) {
     <>
       <div
         id={post._id} // ✅ ADD HERE (VERY IMPORTANT)
-        className="border rounded mb-4 bg-white post-card-mobile"
+        className="border rounded mb-4 bg-white"
         style={{
           width: "100%",
           maxWidth: "600px",

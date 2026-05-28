@@ -10,7 +10,7 @@
 /* Scroll container */
 .reel-container {
   height: 100vh;
-  width: min(420px, 100vw);
+  width: 420px;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   display: flex;

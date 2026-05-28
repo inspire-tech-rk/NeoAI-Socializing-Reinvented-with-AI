@@ -360,10 +360,10 @@ export default function Profile() {
         padding: "20px 24px",
       }}
     >
-    <div className="row gx-4 profile-layout">
+      <div className="row gx-4">
         <div className="col-12 col-lg-9 col-xl-8">
           <div
-            className="card rounded-4 p-3 posts-container profile-posts"
+            className="card rounded-4 p-3 posts-container"
             style={{ maxHeight: "calc(100vh - 40px)", overflowY: "auto" }}
           >
             <h6 className="mb-3">Posts</h6>
@@ -383,7 +383,7 @@ export default function Profile() {
 
         <div className="col-12 col-lg-7 col-xl-4">
           <div
-            className="card bg-dark text-white rounded-4 p-4 text-center sidebar profile-sidebar"
+            className="card bg-dark text-white rounded-4 p-4 text-center sidebar"
             style={{ position: "sticky", top: "20px" }}
           >
             <div onClick={openStory} style={{ cursor: "pointer" }}>
