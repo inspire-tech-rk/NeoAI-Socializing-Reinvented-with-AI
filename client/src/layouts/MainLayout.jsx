@@ -2,12 +2,16 @@ import Sidebar from "../components/sidebar/Sidebar";
 import { useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { Link } from "react-router-dom";
+import CreateModal from "../components/CreateModal";
 
 export default function MainLayout({ children }) {
   const { user } = useContext(AuthContext);
 
   // ✅ SIDEBAR STATE
   const [hovered, setHovered] = useState(false);
+
+  // ✅ CREATE MODAL STATE
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   return (
     <div className="d-flex">
@@ -51,9 +55,13 @@ export default function MainLayout({ children }) {
           <i className="bi bi-film"></i>
         </Link>
 
-        <Link to="/create" className="text-white fs-4">
+        <span
+          className="text-white fs-4"
+          style={{ cursor: "pointer" }}
+          onClick={() => setIsCreateOpen(true)}
+        >
           <i className="bi bi-plus-square"></i>
-        </Link>
+        </span>
 
         <Link to="/messages" className="text-white fs-4">
           <i className="bi bi-chat-dots"></i>
@@ -63,6 +71,12 @@ export default function MainLayout({ children }) {
           <i className="bi bi-person-circle"></i>
         </Link>
       </div>
+
+      {/* ✅ CREATE MODAL */}
+      <CreateModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+      />
     </div>
   );
 }
