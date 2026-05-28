@@ -163,6 +163,8 @@ export default function FeedPage() {
     </span>
   </div>
 
+
+</div>
         <StoryBar />
 
         {posts.map((post) => (
