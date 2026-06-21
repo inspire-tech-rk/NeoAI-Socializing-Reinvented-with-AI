@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../../context/AuthContext";
 import { API_URL } from "../../../config";
 
@@ -11,12 +11,72 @@ const getMediaUrl = (file) => {
 export default function SwitchAccount() {
   const { user, currentUser } = useContext(AuthContext);
   const loggedUser = currentUser || user;
+
   const [showModal, setShowModal] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+
+  useEffect(() => {
+    if (!showModal || !loggedUser?._id) return;
+
+    const checkAccounts = async () => {
+      const savedAccounts =
+        JSON.parse(localStorage.getItem("savedAccounts")) || [];
+
+      const activeAccounts = [];
+
+      for (const acc of savedAccounts) {
+        try {
+          const res = await fetch(`${API_URL}/api/auth/check-user/${acc._id}`, {
+            credentials: "include",
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            activeAccounts.push(data.user);
+          }
+        } catch (err) {
+          console.error("Check account failed", err);
+        }
+      }
+
+      localStorage.setItem("savedAccounts", JSON.stringify(activeAccounts));
+
+      setAccounts(
+        activeAccounts.filter((acc) => acc._id !== loggedUser._id)
+      );
+    };
+
+    checkAccounts();
+  }, [showModal, loggedUser]);
+
+  const switchToAccount = async (account) => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/switch`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: account._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Switch failed");
+        return;
+      }
+
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.href = "/";
+    } catch (err) {
+      alert("Switch failed");
+    }
+  };
 
   const loginAnotherAccount = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
-    localStorage.removeItem("savedAccounts");
     window.location.href = "/auth";
   };
 
@@ -92,9 +152,35 @@ export default function SwitchAccount() {
             </div>
 
             <div style={{ padding: 16 }}>
-              <p className="text-secondary text-center">
-                No other active accounts
-              </p>
+              {accounts.length === 0 ? (
+                <p className="text-secondary text-center">
+                  No other active accounts
+                </p>
+              ) : (
+                accounts.map((acc) => (
+                  <div
+                    key={acc._id}
+                    onClick={() => switchToAccount(acc)}
+                    className="d-flex align-items-center gap-3 mb-3"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <img
+                      src={getMediaUrl(acc.dp)}
+                      onError={(e) => (e.currentTarget.src = "/default-dp.png")}
+                      width={50}
+                      height={50}
+                      className="rounded-circle"
+                      style={{ objectFit: "cover" }}
+                      alt="dp"
+                    />
+
+                    <div>
+                      <strong>{acc.username}</strong>
+                      <div className="text-secondary small">Tap to switch</div>
+                    </div>
+                  </div>
+                ))
+              )}
 
               <button
                 className="btn btn-outline-primary w-100 mt-2"

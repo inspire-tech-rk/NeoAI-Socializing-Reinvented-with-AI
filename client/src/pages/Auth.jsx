@@ -15,12 +15,20 @@ export default function Auth() {
     dp: null,
   });
 
- const saveAccount = (user, token) => {
+const saveAccount = (user, token) => {
   localStorage.setItem("user", JSON.stringify(user));
   if (token) localStorage.setItem("token", token);
 
-  // important: stop storing old switch accounts
-  localStorage.removeItem("savedAccounts");
+  const savedAccounts =
+    JSON.parse(localStorage.getItem("savedAccounts")) || [];
+
+  const updatedAccounts = savedAccounts.filter(
+    (acc) => acc._id !== user._id
+  );
+
+  updatedAccounts.push(user);
+
+  localStorage.setItem("savedAccounts", JSON.stringify(updatedAccounts));
 };
 
   const handleGoogleSuccess = async (credentialResponse) => {
