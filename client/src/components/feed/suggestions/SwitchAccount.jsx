@@ -14,40 +14,53 @@ export default function SwitchAccount() {
 
   const [showModal, setShowModal] = useState(false);
 
-  const savedAccounts =
-    JSON.parse(localStorage.getItem("savedAccounts")) || [];
+  const savedAccounts = JSON.parse(localStorage.getItem("savedAccounts")) || [];
 
   const otherAccounts = savedAccounts.filter(
-    (acc) => acc._id !== loggedUser?._id
+    (acc) => acc._id !== loggedUser?._id,
   );
 
- const switchToAccount = async (account) => {
-  try {
-    const res = await fetch(`${API_URL}/api/auth/switch`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: account._id,
-      }),
-    });
+  const switchToAccount = async (account) => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/switch`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: account._id,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      alert(data.message || "Switch failed");
-      return;
-    }
+     if (!res.ok) {
+  if (res.status === 404) {
+    const savedAccounts =
+      JSON.parse(localStorage.getItem("savedAccounts")) || [];
 
-    localStorage.setItem("user", JSON.stringify(data.user));
-    window.location.href = "/";
-  } catch (err) {
-    console.error("Switch failed", err);
-    alert("Switch failed");
+    const updatedAccounts = savedAccounts.filter(
+      (acc) => acc._id !== account._id
+    );
+
+    localStorage.setItem("savedAccounts", JSON.stringify(updatedAccounts));
+    alert("This old account no longer exists. Removed from switch list.");
+    window.location.reload();
+    return;
   }
-};
+
+  alert(data.message || "Switch failed");
+  return;
+}
+
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.href = "/";
+    } catch (err) {
+      console.error("Switch failed", err);
+      alert("Switch failed");
+    }
+  };
 
   if (!loggedUser) return null;
 
@@ -135,6 +148,8 @@ export default function SwitchAccount() {
                     className="btn btn-primary w-100"
                     onClick={() => {
                       localStorage.removeItem("user");
+                      localStorage.removeItem("token");
+                      localStorage.removeItem("savedAccounts");
                       window.location.href = "/auth";
                     }}
                   >
@@ -152,9 +167,7 @@ export default function SwitchAccount() {
                     >
                       <img
                         src={getMediaUrl(acc.dp)}
-                        onError={(e) =>
-                          (e.target.src = "/default-dp.png")
-                        }
+                        onError={(e) => (e.target.src = "/default-dp.png")}
                         width={50}
                         height={50}
                         className="rounded-circle"
