@@ -10,6 +10,7 @@ import {
 
 import upload from "../middleware/uploadMiddleware.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { checkUser } from "../controllers/authController.js";
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.post("/logout", protect, logout);
 
 /* -------------------- SWITCH ACCOUNT -------------------- */
 router.post("/switch", switchAccount);
+router.get("/check-user/:id", checkUser);
 
 /* -------------------- CURRENT USER -------------------- */
 router.get("/me", protect, me);
