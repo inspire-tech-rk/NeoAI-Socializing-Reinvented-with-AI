@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { AuthContext } from "../../../context/AuthContext";
 import { API_URL } from "../../../config";
 
 const getMediaUrl = (file) => {
-  if (!file) return "/avatar.png";
+  if (!file) return "/default-dp.png";
   if (file.startsWith("http")) return file;
   return `${API_URL}/${file.replace(/^\/+/, "")}`;
 };
@@ -13,47 +13,41 @@ export default function SwitchAccount() {
   const loggedUser = currentUser || user;
 
   const [showModal, setShowModal] = useState(false);
-  const [savedAccounts, setSavedAccounts] = useState([]);
 
-  useEffect(() => {
-    const accounts = JSON.parse(localStorage.getItem("savedAccounts")) || [];
-    setSavedAccounts(accounts);
-  }, [showModal]);
+  const savedAccounts =
+    JSON.parse(localStorage.getItem("savedAccounts")) || [];
 
   const otherAccounts = savedAccounts.filter(
     (acc) => acc._id !== loggedUser?._id
   );
 
-  const switchToAccount = async (account) => {
-    try {
-      const res = await fetch(`${API_URL}/api/auth/switch`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: account._id }),
-      });
+ const switchToAccount = async (account) => {
+  try {
+    const res = await fetch(`${API_URL}/api/auth/switch`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: account._id,
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        alert(data.message || "Switch failed");
-        return;
-      }
-
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      const updatedAccounts = savedAccounts.map((acc) =>
-        acc._id === data.user._id ? data.user : acc
-      );
-
-      localStorage.setItem("savedAccounts", JSON.stringify(updatedAccounts));
-
-      window.location.href = "/";
-    } catch (err) {
-      console.error("Switch failed", err);
-      alert("Switch failed");
+    if (!res.ok) {
+      alert(data.message || "Switch failed");
+      return;
     }
-  };
+
+    localStorage.setItem("user", JSON.stringify(data.user));
+    window.location.href = "/";
+  } catch (err) {
+    console.error("Switch failed", err);
+    alert("Switch failed");
+  }
+};
 
   if (!loggedUser) return null;
 
@@ -63,7 +57,7 @@ export default function SwitchAccount() {
         <div className="d-flex align-items-center gap-2">
           <img
             src={getMediaUrl(loggedUser.dp)}
-            onError={(e) => (e.currentTarget.src = "/avatar.png")}
+            onError={(e) => (e.target.src = "/default-dp.png")}
             alt="dp"
             width={52}
             height={52}
@@ -116,7 +110,10 @@ export default function SwitchAccount() {
           >
             <div
               className="d-flex justify-content-between align-items-center"
-              style={{ padding: "14px 16px", borderBottom: "1px solid #ddd" }}
+              style={{
+                padding: "14px 16px",
+                borderBottom: "1px solid #ddd",
+              }}
             >
               <strong>Switch account</strong>
               <span
@@ -128,39 +125,63 @@ export default function SwitchAccount() {
             </div>
 
             <div style={{ padding: 16 }}>
-              {otherAccounts.map((acc) => (
-                <div
-                  key={acc._id}
-                  onClick={() => switchToAccount(acc)}
-                  className="d-flex align-items-center gap-3 mb-3"
-                  style={{ cursor: "pointer" }}
-                >
-                  <img
-                    src={getMediaUrl(acc.dp)}
-                    onError={(e) => (e.currentTarget.src = "/avatar.png")}
-                    width={50}
-                    height={50}
-                    className="rounded-circle"
-                    style={{ objectFit: "cover" }}
-                    alt=""
-                  />
+              {otherAccounts.length === 0 ? (
+                <>
+                  <p className="text-secondary text-center">
+                    No other saved accounts
+                  </p>
 
-                  <div>
-                    <strong>{acc.username}</strong>
-                    <div className="text-secondary small">Tap to switch</div>
-                  </div>
-                </div>
-              ))}
+                  <button
+                    className="btn btn-primary w-100"
+                    onClick={() => {
+                      localStorage.removeItem("user");
+                      window.location.href = "/auth";
+                    }}
+                  >
+                    Login another account
+                  </button>
+                </>
+              ) : (
+                <>
+                  {otherAccounts.map((acc) => (
+                    <div
+                      key={acc._id}
+                      onClick={() => switchToAccount(acc)}
+                      className="d-flex align-items-center gap-3 mb-3"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <img
+                        src={getMediaUrl(acc.dp)}
+                        onError={(e) =>
+                          (e.target.src = "/default-dp.png")
+                        }
+                        width={50}
+                        height={50}
+                        className="rounded-circle"
+                        style={{ objectFit: "cover" }}
+                        alt=""
+                      />
 
-              <button
-                className="btn btn-outline-primary w-100 mt-2"
-                onClick={() => {
-                  localStorage.removeItem("user");
-                  window.location.href = "/auth";
-                }}
-              >
-                Login another account
-              </button>
+                      <div>
+                        <strong>{acc.username}</strong>
+                        <div className="text-secondary small">
+                          Tap to switch
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    className="btn btn-outline-primary w-100 mt-2"
+                    onClick={() => {
+                      localStorage.removeItem("user");
+                      window.location.href = "/auth";
+                    }}
+                  >
+                    Login another account
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </>
