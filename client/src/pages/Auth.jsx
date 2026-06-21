@@ -15,19 +15,27 @@ export default function Auth() {
     dp: null,
   });
 
-const saveAccount = (user, token) => {
-  localStorage.setItem("user", JSON.stringify(user));
-  if (token) localStorage.setItem("token", token);
+  const saveAccount = (user, token) => {
+    localStorage.setItem("user", JSON.stringify(user));
+    if (token) localStorage.setItem("token", token);
 
-  localStorage.setItem("savedAccounts", JSON.stringify([user]));
-};
+    const savedAccounts =
+      JSON.parse(localStorage.getItem("savedAccounts")) || [];
+
+    const exists = savedAccounts.some((acc) => acc._id === user._id);
+
+    if (!exists) {
+      savedAccounts.push(user);
+      localStorage.setItem("savedAccounts", JSON.stringify(savedAccounts));
+    }
+  };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       const res = await axios.post(
         `${API_URL}/api/auth/google`,
         { credential: credentialResponse.credential },
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
       saveAccount(res.data.user, res.data.token);
@@ -54,7 +62,9 @@ const saveAccount = (user, token) => {
     }
 
     if (
-      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}/.test(form.password)
+      !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}/.test(
+        form.password
+      )
     ) {
       err.password =
         "Password must contain 8+ chars, uppercase, lowercase, number & special char";
@@ -95,7 +105,7 @@ const saveAccount = (user, token) => {
           email: form.email,
           password: form.password,
         },
-        { withCredentials: true },
+        { withCredentials: true }
       );
 
       saveAccount(res.data.user, res.data.token);
@@ -296,7 +306,8 @@ const saveAccount = (user, token) => {
               <button
                 className="btn btn-primary btn-lg w-100 mt-4 rounded-4 fw-semibold"
                 style={{
-                  background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+                  background:
+                    "linear-gradient(135deg, #2563eb, #7c3aed)",
                   border: "none",
                   boxShadow: "0 12px 25px rgba(37,99,235,0.35)",
                 }}
