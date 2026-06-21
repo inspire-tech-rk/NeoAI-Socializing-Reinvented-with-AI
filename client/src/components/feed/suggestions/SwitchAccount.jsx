@@ -35,24 +35,27 @@ export default function SwitchAccount() {
 
       const data = await res.json();
 
-     if (!res.ok) {
-  if (res.status === 404) {
-    const savedAccounts =
-      JSON.parse(localStorage.getItem("savedAccounts")) || [];
+      if (!res.ok) {
+        if (res.status === 404) {
+          const savedAccounts =
+            JSON.parse(localStorage.getItem("savedAccounts")) || [];
 
-    const updatedAccounts = savedAccounts.filter(
-      (acc) => acc._id !== account._id
-    );
+          const updatedAccounts = savedAccounts.filter(
+            (acc) => acc._id !== account._id,
+          );
 
-    localStorage.setItem("savedAccounts", JSON.stringify(updatedAccounts));
-    alert("This old account no longer exists. Removed from switch list.");
-    window.location.reload();
-    return;
-  }
+          localStorage.setItem(
+            "savedAccounts",
+            JSON.stringify(updatedAccounts),
+          );
+          alert("This old account no longer exists. Removed from switch list.");
+          window.location.reload();
+          return;
+        }
 
-  alert(data.message || "Switch failed");
-  return;
-}
+        alert(data.message || "Switch failed");
+        return;
+      }
 
       localStorage.setItem("user", JSON.stringify(data.user));
       window.location.href = "/";
@@ -187,7 +190,7 @@ export default function SwitchAccount() {
                   <button
                     className="btn btn-outline-primary w-100 mt-2"
                     onClick={() => {
-                      localStorage.removeItem("user");
+                      localStorage.clear();
                       window.location.href = "/auth";
                     }}
                   >
