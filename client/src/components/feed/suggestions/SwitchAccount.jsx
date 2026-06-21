@@ -11,43 +11,14 @@ const getMediaUrl = (file) => {
 export default function SwitchAccount() {
   const { user, currentUser } = useContext(AuthContext);
   const loggedUser = currentUser || user;
-
   const [showModal, setShowModal] = useState(false);
 
-  const savedAccounts =
-    JSON.parse(localStorage.getItem("savedAccounts")) || [];
-
-  const otherAccounts = savedAccounts.filter(
-    (acc) => acc._id !== loggedUser?._id
-  );
-
- const switchToAccount = async (account) => {
-  try {
-    const res = await fetch(`${API_URL}/api/auth/switch`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: account._id,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.message || "Switch failed");
-      return;
-    }
-
-    localStorage.setItem("user", JSON.stringify(data.user));
-    window.location.href = "/";
-  } catch (err) {
-    console.error("Switch failed", err);
-    alert("Switch failed");
-  }
-};
+  const loginAnotherAccount = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("savedAccounts");
+    window.location.href = "/auth";
+  };
 
   if (!loggedUser) return null;
 
@@ -57,14 +28,13 @@ export default function SwitchAccount() {
         <div className="d-flex align-items-center gap-2">
           <img
             src={getMediaUrl(loggedUser.dp)}
-            onError={(e) => (e.target.src = "/default-dp.png")}
+            onError={(e) => (e.currentTarget.src = "/default-dp.png")}
             alt="dp"
             width={52}
             height={52}
             className="rounded-circle"
             style={{ objectFit: "cover" }}
           />
-
           <strong style={{ fontSize: 14 }}>{loggedUser.username}</strong>
         </div>
 
@@ -110,10 +80,7 @@ export default function SwitchAccount() {
           >
             <div
               className="d-flex justify-content-between align-items-center"
-              style={{
-                padding: "14px 16px",
-                borderBottom: "1px solid #ddd",
-              }}
+              style={{ padding: "14px 16px", borderBottom: "1px solid #ddd" }}
             >
               <strong>Switch account</strong>
               <span
@@ -125,63 +92,16 @@ export default function SwitchAccount() {
             </div>
 
             <div style={{ padding: 16 }}>
-              {otherAccounts.length === 0 ? (
-                <>
-                  <p className="text-secondary text-center">
-                    No other saved accounts
-                  </p>
+              <p className="text-secondary text-center">
+                No other active accounts
+              </p>
 
-                  <button
-                    className="btn btn-primary w-100"
-                    onClick={() => {
-                      localStorage.removeItem("user");
-                      window.location.href = "/auth";
-                    }}
-                  >
-                    Login another account
-                  </button>
-                </>
-              ) : (
-                <>
-                  {otherAccounts.map((acc) => (
-                    <div
-                      key={acc._id}
-                      onClick={() => switchToAccount(acc)}
-                      className="d-flex align-items-center gap-3 mb-3"
-                      style={{ cursor: "pointer" }}
-                    >
-                      <img
-                        src={getMediaUrl(acc.dp)}
-                        onError={(e) =>
-                          (e.target.src = "/default-dp.png")
-                        }
-                        width={50}
-                        height={50}
-                        className="rounded-circle"
-                        style={{ objectFit: "cover" }}
-                        alt=""
-                      />
-
-                      <div>
-                        <strong>{acc.username}</strong>
-                        <div className="text-secondary small">
-                          Tap to switch
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <button
-                    className="btn btn-outline-primary w-100 mt-2"
-                    onClick={() => {
-                      localStorage.removeItem("user");
-                      window.location.href = "/auth";
-                    }}
-                  >
-                    Login another account
-                  </button>
-                </>
-              )}
+              <button
+                className="btn btn-outline-primary w-100 mt-2"
+                onClick={loginAnotherAccount}
+              >
+                Login another account
+              </button>
             </div>
           </div>
         </>
