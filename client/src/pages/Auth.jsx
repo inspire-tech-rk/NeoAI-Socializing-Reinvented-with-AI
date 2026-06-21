@@ -15,21 +15,21 @@ export default function Auth() {
     dp: null,
   });
 
-const saveAccount = (user, token) => {
-  localStorage.setItem("user", JSON.stringify(user));
-  if (token) localStorage.setItem("token", token);
+  const saveAccount = (user, token) => {
+    localStorage.setItem("user", JSON.stringify(user));
+    if (token) localStorage.setItem("token", token);
 
-  const savedAccounts =
-    JSON.parse(localStorage.getItem("savedAccounts")) || [];
+    const savedAccounts =
+      JSON.parse(localStorage.getItem("savedAccounts")) || [];
 
-  const updatedAccounts = savedAccounts.filter(
-    (acc) => acc._id !== user._id
-  );
+    const exists = savedAccounts.some((acc) => acc._id === user._id);
 
-  updatedAccounts.push(user);
+    if (!exists) {
+      savedAccounts.push(user);
+      localStorage.setItem("savedAccounts", JSON.stringify(savedAccounts));
+    }
+  };
 
-  localStorage.setItem("savedAccounts", JSON.stringify(updatedAccounts));
-};
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       const res = await axios.post(
