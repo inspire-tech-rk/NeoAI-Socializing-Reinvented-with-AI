@@ -1,12 +1,12 @@
 import { useState, useContext } from "react";
 import PostUpload from "./post/PostUpload";
 import StoryUpload from "./story/StoryUpload";
-import { AuthContext } from "../context/AuthContext";
+
 import ReelUploadModal from "./reel/ReelUploadModal";
 
 export default function CreateModal({ isOpen, onClose }) {
   const [showPostUpload, setShowPostUpload] = useState(false);
-  const { setMyPosts } = useContext(AuthContext);
+ 
   const [showStoryUpload, setShowStoryUpload] = useState(false);
   const [showReelUpload, setShowReelUpload] = useState(false);
 
@@ -63,15 +63,16 @@ export default function CreateModal({ isOpen, onClose }) {
             </div>
           </>
         ) : (
-          <PostUpload
-            onClose={() => setShowPostUpload(false)}
-            onPostCreated={(newPost) => {
-              setMyPosts((prev) => [newPost, ...prev]);
-              window.dispatchEvent(
-                new CustomEvent("new-post-created", { detail: newPost }),
-              );
-            }}
-          />
+         <PostUpload
+  onClose={() => setShowPostUpload(false)}
+  onPostCreated={(newPost) => {
+    window.dispatchEvent(
+      new CustomEvent("new-post-created", {
+        detail: newPost,
+      })
+    );
+  }}
+/>
         )}
         {showStoryUpload && (
           <StoryUpload onClose={() => setShowStoryUpload(false)} />

@@ -1,10 +1,10 @@
-import { useState, useRef, useContext } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
 import { API_URL } from "../../config";
-import { AuthContext } from "../../context/AuthContext";
+
 
 export default function PostUpload({ onClose, onPostCreated }) {
-  const { user } = useContext(AuthContext);
+
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [caption, setCaption] = useState("");

@@ -6,12 +6,12 @@ export default function ProtectedRoute({ children }) {
   const { user, loading } = useContext(AuthContext);
 
   if (loading) {
-    return <p className="text-center mt-5">Loading...</p>;
+    return (
+      <div className="text-center mt-5">
+        Connecting to server...
+      </div>
+    );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return children;
+  return user ? children : <Navigate to="/auth" replace />;
 }

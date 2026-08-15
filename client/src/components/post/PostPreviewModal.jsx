@@ -53,7 +53,7 @@ function VideoPlayer({ src }) {
 }
 
 export default function PostPreviewModal({ post, onClose }) {
-  const { currentUser } = useContext(AuthContext);
+ const { user: currentUser } = useContext(AuthContext);
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post?.likes?.length || 0);
