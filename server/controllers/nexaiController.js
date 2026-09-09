@@ -6,6 +6,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+/* =========================================================
+   AI CLIENTS
+========================================================= */
+
 const gemini = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
@@ -14,14 +18,81 @@ const cache = new NodeCache({
   stdTTL: 600,
 });
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
 const getTitleFromQuestion = (question) => {
   if (!question) return "New Chat";
-  return question.length > 35 ? question.slice(0, 35) + "..." : question;
+
+  return question.length > 35
+    ? question.slice(0, 35) + "..."
+    : question;
 };
+
+const getErrorMessage = (error) => {
+  return (
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    "Unknown error"
+  );
+};
+
+/*
+  Gemini accepts:
+  user
+  model
+
+  Your frontend/database uses:
+  user
+  assistant
+
+  So we normalize assistant -> model.
+*/
+const buildGeminiConversation = (history = [], question) => {
+  const conversation = [];
+
+  for (const msg of history) {
+    if (!msg?.content) continue;
+
+    conversation.push({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [
+        {
+          text: String(msg.content),
+        },
+      ],
+    });
+  }
+
+  if (question) {
+    conversation.push({
+      role: "user",
+      parts: [
+        {
+          text: String(question),
+        },
+      ],
+    });
+  }
+
+  return conversation;
+};
+
+/* =========================================================
+   CREATE CHAT
+========================================================= */
 
 export const createNexAIChat = async (req, res) => {
   try {
     const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        message: "userId is required",
+      });
+    }
 
     const chat = await NexAIChat.create({
       userId,
@@ -32,9 +103,16 @@ export const createNexAIChat = async (req, res) => {
     res.status(201).json(chat);
   } catch (err) {
     console.error("Create NexAI chat error:", err);
-    res.status(500).json({ message: "Failed to create chat" });
+
+    res.status(500).json({
+      message: "Failed to create chat",
+    });
   }
 };
+
+/* =========================================================
+   GET ALL CHATS
+========================================================= */
 
 export const getNexAIChats = async (req, res) => {
   try {
@@ -42,14 +120,24 @@ export const getNexAIChats = async (req, res) => {
 
     const chats = await NexAIChat.find({ userId })
       .select("title pinned createdAt updatedAt messages")
-      .sort({ pinned: -1, updatedAt: -1 });
+      .sort({
+        pinned: -1,
+        updatedAt: -1,
+      });
 
     res.json(chats);
   } catch (err) {
     console.error("Get NexAI chats error:", err);
-    res.status(500).json({ message: "Failed to load chats" });
+
+    res.status(500).json({
+      message: "Failed to load chats",
+    });
   }
 };
+
+/* =========================================================
+   GET SINGLE CHAT
+========================================================= */
 
 export const getSingleNexAIChat = async (req, res) => {
   try {
@@ -58,15 +146,24 @@ export const getSingleNexAIChat = async (req, res) => {
     const chat = await NexAIChat.findById(chatId);
 
     if (!chat) {
-      return res.status(404).json({ message: "Chat not found" });
+      return res.status(404).json({
+        message: "Chat not found",
+      });
     }
 
     res.json(chat);
   } catch (err) {
     console.error("Get single NexAI chat error:", err);
-    res.status(500).json({ message: "Failed to load chat" });
+
+    res.status(500).json({
+      message: "Failed to load chat",
+    });
   }
 };
+
+/* =========================================================
+   DELETE CHAT
+========================================================= */
 
 export const deleteNexAIChat = async (req, res) => {
   try {
@@ -74,36 +171,78 @@ export const deleteNexAIChat = async (req, res) => {
 
     await NexAIChat.findByIdAndDelete(chatId);
 
-    res.json({ message: "Chat deleted" });
+    res.json({
+      message: "Chat deleted",
+    });
   } catch (err) {
     console.error("Delete NexAI chat error:", err);
-    res.status(500).json({ message: "Failed to delete chat" });
+
+    res.status(500).json({
+      message: "Failed to delete chat",
+    });
   }
 };
+
+/* =========================================================
+   CLEAR ALL CHATS
+========================================================= */
 
 export const clearNexAIChats = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    await NexAIChat.deleteMany({ userId });
+    await NexAIChat.deleteMany({
+      userId,
+    });
 
-    res.json({ message: "All chats cleared" });
+    res.json({
+      message: "All chats cleared",
+    });
   } catch (err) {
     console.error("Clear NexAI chats error:", err);
-    res.status(500).json({ message: "Failed to clear chats" });
+
+    res.status(500).json({
+      message: "Failed to clear chats",
+    });
   }
 };
 
+/* =========================================================
+   ASK NEXAI
+========================================================= */
+
 export const askNexAI = async (req, res) => {
   try {
-    const { question, history, userId, chatId } = req.body;
-    const imageUrl = req.file ? req.file.path : "";
+    const {
+      question,
+      history = [],
+      userId,
+      chatId,
+    } = req.body;
 
-    if (!question && !imageUrl) {
-      return res.status(400).json({ message: "Question or image is required" });
+    const imageUrl = req.file?.path || "";
+
+    /* ---------------------------------------------
+       VALIDATION
+    --------------------------------------------- */
+
+    if (!question?.trim() && !imageUrl) {
+      return res.status(400).json({
+        message: "Question or image is required",
+      });
     }
 
-    let chat;
+    if (!userId) {
+      return res.status(400).json({
+        message: "userId is required",
+      });
+    }
+
+    /* ---------------------------------------------
+       FIND / CREATE CHAT
+    --------------------------------------------- */
+
+    let chat = null;
 
     if (chatId) {
       chat = await NexAIChat.findById(chatId);
@@ -121,59 +260,25 @@ export const askNexAI = async (req, res) => {
       chat.title = getTitleFromQuestion(question);
     }
 
-    const conversation = [
-      ...(history || []).map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: msg.content,
-      })),
-      {
-        role: "user",
-        content: question,
-      },
-    ];
+    /* ---------------------------------------------
+       CACHE
+    --------------------------------------------- */
 
-    if (imageUrl) {
-      try {
-        const response = await gemini.models.generateContent({
-          model: "gemini-2.0-flash",
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: question || "Describe this image" },
-                {
-                  fileData: {
-                    mimeType: req.file.mimetype,
-                    fileUri: imageUrl,
-                  },
-                },
-              ],
-            },
-          ],
-        });
+    const cacheKey = `${userId}:${question || "image"}`;
 
-        const text = response.text;
-
-        chat.messages.push(
-          { role: "user", content: question, image: imageUrl },
-          { role: "assistant", content: text, type: "normal" }
-        );
-
-        await chat.save();
-
-        return res.json({ answer: text, chat });
-      } catch (err) {
-        console.error("Gemini image failed:", err.response?.data || err.message);
-      }
-    }
-
-    const cacheKey = `${userId}:${question}`;
     const cached = cache.get(cacheKey);
 
-    if (cached) {
+    if (cached && !imageUrl) {
       chat.messages.push(
-        { role: "user", content: question, image: imageUrl },
-        { role: "assistant", content: cached, type: "normal" }
+        {
+          role: "user",
+          content: question,
+        },
+        {
+          role: "assistant",
+          content: cached,
+          type: "normal",
+        }
       );
 
       await chat.save();
@@ -184,39 +289,96 @@ export const askNexAI = async (req, res) => {
       });
     }
 
+    /* =================================================
+       PROVIDER 1
+       OPENROUTER
+    ================================================= */
+
     let text = null;
 
     try {
+      console.log("🤖 Trying OpenRouter...");
+
+      const conversation = [
+        ...history
+          .filter((msg) => msg?.content)
+          .map((msg) => ({
+            role:
+              msg.role === "assistant"
+                ? "assistant"
+                : "user",
+            content: String(msg.content),
+          })),
+        {
+          role: "user",
+          content: String(question || ""),
+        },
+      ];
+
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
-          model: "meta-llama/llama-3.1-8b-instruct:free",
+          model: "openrouter/free",
           messages: conversation,
         },
         {
           headers: {
             Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
+
             "HTTP-Referer":
               process.env.FRONTEND_URL ||
               "https://neo-ai-socializing-reinvented-with.vercel.app",
+
             "X-Title": "NexAI",
           },
+
+          timeout: 30000,
         }
       );
 
-      text = response.data.choices[0].message.content;
-      console.log("✅ Answer from OpenRouter");
-    } catch (err) {
-      console.error("OpenRouter failed:", err.response?.data || err.message);
+      text =
+        response.data?.choices?.[0]?.message?.content?.trim();
+
+      if (text) {
+        console.log("✅ OpenRouter succeeded");
+      }
+    } catch (error) {
+      console.error(
+        "❌ OpenRouter failed:",
+        getErrorMessage(error)
+      );
     }
+
+    /* =================================================
+       PROVIDER 2
+       GROQ
+    ================================================= */
 
     if (!text) {
       try {
+        console.log("🤖 Trying Groq...");
+
+        const conversation = [
+          ...history
+            .filter((msg) => msg?.content)
+            .map((msg) => ({
+              role:
+                msg.role === "assistant"
+                  ? "assistant"
+                  : "user",
+              content: String(msg.content),
+            })),
+          {
+            role: "user",
+            content: String(question || ""),
+          },
+        ];
+
         const response = await axios.post(
           "https://api.groq.com/openai/v1/chat/completions",
           {
-            model: "llama-3.1-8b-instant",
+            model: "openai/gpt-oss-20b",
             messages: conversation,
           },
           {
@@ -224,57 +386,123 @@ export const askNexAI = async (req, res) => {
               Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
               "Content-Type": "application/json",
             },
+
+            timeout: 30000,
           }
         );
 
-        text = response.data.choices[0].message.content;
-        console.log("✅ Answer from Groq");
-      } catch (err) {
-        console.error("Groq failed:", err.response?.data || err.message);
+        text =
+          response.data?.choices?.[0]?.message?.content?.trim();
+
+        if (text) {
+          console.log("✅ Groq succeeded");
+        }
+      } catch (error) {
+        console.error(
+          "❌ Groq failed:",
+          getErrorMessage(error)
+        );
       }
     }
+
+    /* =================================================
+       PROVIDER 3
+       GEMINI
+    ================================================= */
 
     if (!text) {
       try {
-        const response = await gemini.models.generateContent({
-          model: "gemini-2.0-flash",
-          contents: conversation.map((msg) => ({
-            role: msg.role,
-            parts: [{ text: msg.content }],
-          })),
-        });
+        console.log("🤖 Trying Gemini...");
 
-        text = response.text;
-        console.log("✅ Answer from Gemini");
-      } catch (err) {
-        console.error("Gemini failed:", err.response?.data || err.message);
+        const conversation = buildGeminiConversation(
+          history,
+          question
+        );
+
+        const response =
+          await gemini.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents: conversation,
+          });
+
+        text = response.text?.trim();
+
+        if (text) {
+          console.log("✅ Gemini succeeded");
+        }
+      } catch (error) {
+        console.error(
+          "❌ Gemini failed:",
+          getErrorMessage(error)
+        );
       }
     }
 
+    /* =================================================
+       ALL PROVIDERS FAILED
+    ================================================= */
+
     if (!text) {
-      return res.status(500).json({
-        message: "⚠️ All AI services failed. Try again later.",
+      console.error(
+        "❌❌❌ ALL AI PROVIDERS FAILED"
+      );
+
+      return res.status(503).json({
+        message:
+          "⚠️ All AI services are currently unavailable. Please try again.",
       });
     }
 
-    cache.set(cacheKey, text);
+    /* ---------------------------------------------
+       CACHE SUCCESSFUL RESPONSE
+    --------------------------------------------- */
+
+    if (!imageUrl) {
+      cache.set(cacheKey, text);
+    }
+
+    /* ---------------------------------------------
+       SAVE CHAT
+    --------------------------------------------- */
 
     chat.messages.push(
-      { role: "user", content: question, image: imageUrl },
-      { role: "assistant", content: text, type: "normal" }
+      {
+        role: "user",
+        content: question || "",
+        image: imageUrl,
+      },
+      {
+        role: "assistant",
+        content: text,
+        type: "normal",
+      }
     );
 
     await chat.save();
 
-    res.json({
+    /* ---------------------------------------------
+       RESPONSE
+    --------------------------------------------- */
+
+    return res.json({
       answer: text,
       chat,
     });
   } catch (err) {
-    console.error("NexAI controller error:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error(
+      "❌ NexAI controller error:",
+      err
+    );
+
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
   }
 };
+
+/* =========================================================
+   RENAME CHAT
+========================================================= */
 
 export const renameNexAIChat = async (req, res) => {
   try {
@@ -289,20 +517,40 @@ export const renameNexAIChat = async (req, res) => {
 
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ message: "Failed to rename chat" });
+    console.error("Rename chat error:", err);
+
+    res.status(500).json({
+      message: "Failed to rename chat",
+    });
   }
 };
+
+/* =========================================================
+   PIN / UNPIN CHAT
+========================================================= */
 
 export const togglePinNexAIChat = async (req, res) => {
   try {
     const { chatId } = req.params;
 
     const chat = await NexAIChat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({
+        message: "Chat not found",
+      });
+    }
+
     chat.pinned = !chat.pinned;
+
     await chat.save();
 
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ message: "Failed to pin chat" });
+    console.error("Pin chat error:", err);
+
+    res.status(500).json({
+      message: "Failed to pin chat",
+    });
   }
 };
